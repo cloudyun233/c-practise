@@ -18,7 +18,9 @@
 
 // 代码空间：
 
-#include "stdio.h"
+
+
+// #include "stdio.h"
 // int main(){
 //     char line[1000];
 //     char temp;
@@ -102,3 +104,103 @@
  */
 
 // 代码空间：
+#include <stdio.h>
+#include <string.h>
+
+// 将十六进制字符转换为十进制数值
+int hexToDec(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return 0;
+}
+
+int main() {
+    char line[1000];  // 存储每行输入
+    int lastHour = 0, lastMinute = 0, lastSecond = 0;  // 保存最后一条有效语句的时间
+    int hasValid = 0;  // 标记是否找到有效语句
+    
+    // 循环读取每行输入
+    while (scanf("%[^\n]%*c", line) != EOF || scanf("%*c") == 1) {
+        // 遇到END行结束输入
+        if (strcmp(line, "END") == 0 || strstr(line, "END") == line) {
+            break;
+        }
+        
+        // 只处理$GPRMC开头的语句
+        if (strstr(line, "$GPRMC") != line) {
+            continue;
+        }
+        
+        // 查找校验和标识*
+        char *star = strchr(line, '*');
+        if (star == NULL) {
+            continue;
+        }
+        
+        // 计算校验和：$和*之间所有字符的异或值
+        int checksum = 0;
+        for (char *p = line + 1; p < star; p++) {
+            checksum ^= (int)(*p);
+        }
+        
+        // 解析语句中的校验和
+        int expectedChecksum = hexToDec(*(star + 1)) * 16 + hexToDec(*(star + 2));
+        
+        // 校验和不匹配则跳过
+        if (checksum != expectedChecksum) {
+            continue;
+        }
+        
+        // 手动分割字段，代替strtok
+        char *fields[15];
+        int fieldCount = 0;
+        char *p = line;
+        
+        fields[fieldCount++] = p;
+        while (*p && fieldCount < 15) {
+            if (*p == ',' || *p == '*') {
+                *p = '\0';
+                if (*(p + 1) && *(p + 1) != ',' && *(p + 1) != '*') {
+                    fields[fieldCount++] = p + 1;
+                }
+            }
+            p++;
+        }
+        
+        // 字段数量不足则跳过
+        if (fieldCount < 3) {
+            continue;
+        }
+        
+        // 检查是否已定位（状态必须为A）
+        if (fields[2][0] != 'A') {
+            continue;
+        }
+        
+        // 解析UTC时间
+        char *time = fields[1];
+        int hour = (time[0] - '0') * 10 + (time[1] - '0');
+        int minute = (time[2] - '0') * 10 + (time[3] - '0');
+        int second = (time[4] - '0') * 10 + (time[5] - '0');
+        
+        // 转换为北京时间（UTC+8）
+        hour += 8;
+        if (hour >= 24) {
+            hour -= 24;
+        }
+        
+        // 保存当前有效语句的时间
+        lastHour = hour;
+        lastMinute = minute;
+        lastSecond = second;
+        hasValid = 1;
+    }
+    
+    // 输出最后一条有效语句的北京时间
+    if (hasValid) {
+        printf("%02d:%02d:%02d\n", lastHour, lastMinute, lastSecond);
+    }
+    
+    return 0;
+}
