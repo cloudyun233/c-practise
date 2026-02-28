@@ -55,24 +55,24 @@ using namespace std;
 //     }
 // }
 
-// int main(){
-//     int m,n;
+int main(){
+    int m,n;
     
-//     while(cin >> m >> n){
-//         bool isfind = false;
-//         if(m == 0 && n == 0) break;
-//         for(auto i = m;i <= n;i++){
-//             int x = pow(i/100,3) + pow(i%100/10,3) + pow(i%10,3);
-//             if(x == i) {
-//                 cout << i << " ";
-//                 isfind = true;
-//             }
-//         }
-//         if(isfind == false) cout << "no";
-//         cout << endl;
-//     }
-//     return 0;
-// }
+    while(cin >> m >> n){
+        bool isfind = false;
+        if(m == 0 && n == 0) break;
+        for(auto i = m;i <= n;i++){
+            int x = pow(i/100,3) + pow(i%100/10,3) + pow(i%10,3);
+            if(x == i) {
+                cout << i << " ";
+                isfind = true;
+            }
+        }
+        if(isfind == false) cout << "no";
+        cout << endl;
+    }
+    return 0;
+}
 
 
 // int main(){
