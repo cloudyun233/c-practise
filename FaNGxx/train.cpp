@@ -314,43 +314,78 @@ using namespace std;
 
 
 
-int main(){
-    int n,k;
-    const int N = 10;
-    cin >> n >> k;
-    int a[N][N],s[N][N],temp[N][N] = {0};
+// int main(){
+//     int n,k;
+//     const int N = 10;
+//     cin >> n >> k;
+//     int a[N][N],s[N][N],temp[N][N] = {0};
     
-    int i,j,m = 0;
-    for(i = 0;i < n;i++){//读入矩阵
-        for(j = 0;j < n;j++){
-            cin >> a[i][j];
-        }
-    }
+//     int i,j,m = 0;
+//     for(i = 0;i < n;i++){//读入矩阵
+//         for(j = 0;j < n;j++){
+//             cin >> a[i][j];
+//         }
+//     }
 
-    for(i = 0;i < n;i++){
-        temp[i][i] = 1;
-    }
+//     for(i = 0;i < n;i++){
+//         temp[i][i] = 1;
+//     }
 
-    while(k > 0){
-        memset(s, 0, sizeof(s));
-        for(i = 0;i < n;i++){
-            for(j = 0;j < n;j++){
-                for(m = 0;m < n;m++){
-                    s[i][j] += temp[i][m]*a[m][j];
-                }         
-            }
-        }
-        memcpy(temp, s, sizeof(temp));
-        --k;
-    }
+//     while(k > 0){
+//         memset(s, 0, sizeof(s));
+//         for(i = 0;i < n;i++){
+//             for(j = 0;j < n;j++){
+//                 for(m = 0;m < n;m++){
+//                     s[i][j] += temp[i][m]*a[m][j];
+//                 }         
+//             }
+//         }
+//         memcpy(temp, s, sizeof(temp));
+//         --k;
+//     }
              
-    for(i = 0;i < n;i++){
-        for(j = 0;j < n;j++){
-            cout << s[i][j] << " ";
-        }
-        cout << endl;
+//     for(i = 0;i < n;i++){
+//         for(j = 0;j < n;j++){
+//             cout << s[i][j] << " ";
+//         }
+//         cout << endl;
+//     }
+// }
+
+
+
+struct Node{
+    double w;
+    double c;
+    double p;
+}a[101];
+
+bool cmp(Node a,Node b){
+        return a.p > b.p;
     }
+int main(){
+    int N;double T;
+    
+    cin >> N >> T;
+
+    for(int i = 0;i < N;i++){
+        cin >> a[i].w >> a[i].c;
+        a[i].p = a[i].c / a[i].w;
+    } 
+
+    sort(a,a+N,cmp);
+
+    double price = 0;
+    for(int i = 0;i < N;i++){
+        if(T - a[i].w >= 0){
+            T = T - a[i].w;
+            price += a[i].c;
+        }
+        else{
+            price += T*a[i].p;
+            break;
+        }
+    }
+
+    cout << fixed << setprecision(2) << price << endl;
 }
-
-
-
