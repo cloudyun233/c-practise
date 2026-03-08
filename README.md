@@ -2,10 +2,10 @@
 
 ## 仓库说明
 
-本仓库专门用于整理和记录**复试学习练习**资料，主要针对以下两个考研项目：
+本仓库用于记录两位报考生学习复试的学习过程，主要针对以下两个考研项目：
 
-- **重庆大学计算机技术考研** (Chongqing University - Computer Technology)
-- **江南大学软件工程专硕** (Jiangnan University - Software Engineering Professional Master's)
+- **重庆大学计算机技术专硕** 
+- **江南大学软件工程专硕** 
 
 ---
 
