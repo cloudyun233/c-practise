@@ -353,39 +353,42 @@ using namespace std;
 // }
 
 
+// struct Node{
+//     double w;
+//     double c;
+//     double p;
+// }a[101];
 
-struct Node{
-    double w;
-    double c;
-    double p;
-}a[101];
-
-bool cmp(Node a,Node b){
-        return a.p > b.p;
-    }
-int main(){
-    int N;double T;
+// bool cmp(Node a,Node b){
+//         return a.p > b.p;
+//     }
+// int main(){
+//     int N;double T;
     
-    cin >> N >> T;
+//     cin >> N >> T;
 
-    for(int i = 0;i < N;i++){
-        cin >> a[i].w >> a[i].c;
-        a[i].p = a[i].c / a[i].w;
-    } 
+//     for(int i = 0;i < N;i++){
+//         cin >> a[i].w >> a[i].c;
+//         a[i].p = a[i].c / a[i].w;
+//     } 
 
-    sort(a,a+N,cmp);
+//     sort(a,a+N,cmp);
 
-    double price = 0;
-    for(int i = 0;i < N;i++){
-        if(T - a[i].w >= 0){
-            T = T - a[i].w;
-            price += a[i].c;
-        }
-        else{
-            price += T*a[i].p;
-            break;
-        }
-    }
+//     double price = 0;
+//     for(int i = 0;i < N;i++){
+//         if(T - a[i].w >= 0){
+//             T = T - a[i].w;
+//             price += a[i].c;
+//         }
+//         else{
+//             price += T*a[i].p;
+//             break;
+//         }
+//     }
 
-    cout << fixed << setprecision(2) << price << endl;
-}
+//     cout << fixed << setprecision(2) << price << endl;
+// }
+
+
+
+
