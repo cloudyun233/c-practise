@@ -27,6 +27,7 @@ using namespace std;
 //     cout << dp[T] << endl;
 // }
 
+
 // P2871 [USACO07DEC] Charm Bracelet S
 // struct Node{
 //     int W;//重量
@@ -52,3 +53,5 @@ using namespace std;
 //     cout << dp[M] << endl;
 //     return 0;
 // }
+
+
