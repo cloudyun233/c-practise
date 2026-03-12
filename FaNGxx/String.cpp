@@ -69,39 +69,54 @@ using namespace std;
 
 
 //P1308 [NOIP 2011 普及组] 统计单词数
-string s, t;
-int counts = 0;
-int sta = -1;
-string temp;
+// string s, t;
+// int counts = 0;
+// int sta = -1;
+// string temp;
 
-int main(){
-	getline(cin, s);
-	getline(cin, t);
-	t += ' ';
+// int main(){
+// 	getline(cin, s);
+// 	getline(cin, t);
+// 	t += ' ';
 
-	for(char &c: s){
-		c = tolower(c);
-	} 
-	for(char &c: t){
-		c = tolower(c);
-	} 
+// 	for(char &c: s){
+// 		c = tolower(c);
+// 	} 
+// 	for(char &c: t){
+// 		c = tolower(c);
+// 	} 
 	
-	int len = s.size();
+// 	int len = s.size();
 	
-	for(int i = 0; i < t.size(); i++){
-		if(t[i] == ' '){
-			if(temp == s){
-				counts++;
-				if(sta == -1) sta = i - len;
-			}
-            temp = "";
-		}
-		else temp += t[i];
-	}
+// 	for(int i = 0; i < t.size(); i++){
+// 		if(t[i] == ' '){
+// 			if(temp == s){
+// 				counts++;
+// 				if(sta == -1) sta = i - len;
+// 			}
+//             temp = "";
+// 		}
+// 		else temp += t[i];
+// 	}
 	
-	if(sta != -1){
-		cout << counts << " " << sta << endl;
-	} 
-	else cout << "-1" << endl;
+// 	if(sta != -1){
+// 		cout << counts << " " << sta << endl;
+// 	} 
+// 	else cout << "-1" << endl;
 	
-} 
+// } 
+
+// int main(){
+//     int N;
+//     cin >> N;
+//     vector<long long> a(N);
+    
+//     for(int i = 0; i < N; i++){
+//         cin >> a[i];
+//     }
+
+//     sort(a.begin(), a.end());
+//     for(int i = 0; i < N; i++){
+//         cout << a[i] << (i == N -1 ? "" : " ");
+//     }
+// }
