@@ -55,3 +55,24 @@ using namespace std;
 // }
 
 
+//P1164 小 A 点菜
+int a[101], N, M, f[101][1001];
+int main(){
+    cin >> N >> M;
+    for(int i = 1; i <= N; ++i){
+        cin >> a[i];
+    }
+
+    for(int i = 0; i <= N; ++i){
+        f[i][0] = 1;
+    }
+
+    for(int i = 1; i <= N; ++i){
+        for(int j = 1; j <= M; ++j){
+            f[i][j] += f[i-1][j];//不买第i道菜
+            if(j >= a[i]) f[i][j] += f[i-1][j-a[i]];//买第i道菜
+        }
+    }
+
+    cout << f[N][M] << endl;
+}
