@@ -31,33 +31,35 @@ using namespace std;
 // }
 
 
-struct Node{
-    int a;//开始时间
-    int b;//结束时间
-}p[1000001];
+// struct Node{
+//     int a;//开始时间
+//     int b;//结束时间
+// }p[1000001];
 
-bool cmp(Node x, Node y){
-    if(x.b != y.b) return x.b < y.b;
-    else return x.a > y.a;
-}
-int main(){
-    cin >> n;
-    int i,j = 0;
-    for(i = 1; i <= n; i++){
-        cin >> p[i].a >> p[i].b;
-    }
+// bool cmp(Node x, Node y){
+//     if(x.b != y.b) return x.b < y.b;
+//     else return x.a > y.a;
+// }
+// int main(){
+//     int n;
+//     cin >> n;
+//     int i,j = 0;
+//     for(i = 1; i <= n; i++){
+//         cin >> p[i].a >> p[i].b;
+//     }
 
-    sort(p + 1, p + n + 1, cmp);
+//     sort(p + 1, p + n + 1, cmp);
 
-    int sum = 0;
-    int end = -1;
-    for(j = 1; j <= n; j++){
-        if(p[j].a >= end){
-            end = p[j].b;
-            sum++;
-        }
-    }
-    cout << sum << endl;
-}
+//     int sum = 0;
+//     int end = -1;
+//     for(j = 1; j <= n; j++){
+//         if(p[j].a >= end){
+//             end = p[j].b;
+//             sum++;
+//         }
+//     }
+//     cout << sum << endl;
+// }
 
 
+//P1090 [NOIP 2004 提高组] 合并果子

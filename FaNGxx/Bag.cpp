@@ -56,23 +56,56 @@ using namespace std;
 
 
 //P1164 小 A 点菜
-int a[101], N, M, f[101][1001];
+// int a[101], N, M, f[101][1001];
+// int main(){
+//     cin >> N >> M;
+//     for(int i = 1; i <= N; ++i){
+//         cin >> a[i];
+//     }
+
+//     for(int i = 0; i <= N; ++i){
+//         f[i][0] = 1;
+//     }
+
+//     for(int i = 1; i <= N; ++i){
+//         for(int j = 1; j <= M; ++j){
+//             f[i][j] += f[i-1][j];//不买第i道菜
+//             if(j >= a[i]) f[i][j] += f[i-1][j-a[i]];//买第i道菜
+//         }
+//     }
+
+//     cout << f[N][M] << endl;
+// }
+
+
+//P1060 [NOIP 2006 普及组] 开心的金明
+struct node{
+    int v;//价格
+    int w;//重要度
+}p[26];
+int f[26][30000];
 int main(){
-    cin >> N >> M;
-    for(int i = 1; i <= N; ++i){
-        cin >> a[i];
+    int n, m;//n为总钱数，m为最大个数
+    cin >> n >> m;
+    for(int i = 1; i <= m; i++){
+        cin >> p[i].v >> p[i].w;
+        p[i].w *= p[i].v;
     }
 
-    for(int i = 0; i <= N; ++i){
-        f[i][0] = 1;
-    }
+    for(int i = 1; i <= m; i++){
+        for(int j = 0; j <= n; j++){
+            if(j >= p[i].v){
+                f[i][j] = max(f[i-1][j], f[i-1][j-p[i].v] + p[i].w);
+            }
+            else f[i][j] = f[i-1][j];
 
-    for(int i = 1; i <= N; ++i){
-        for(int j = 1; j <= M; ++j){
-            f[i][j] += f[i-1][j];//不买第i道菜
-            if(j >= a[i]) f[i][j] += f[i-1][j-a[i]];//买第i道菜
         }
     }
+    // for(int i = 1; i <= m; i++){
+    //     for(int j = n; j >= p[i].v; j--){
+    //         f[j] = max(f[j], f[j - p[i].v] + p[i].w);
+    //     }
+    // }
 
-    cout << f[N][M] << endl;
+    cout << f[m][n] << endl;
 }
