@@ -121,3 +121,71 @@ using namespace std;
 //     }
 // }
 
+
+//P5734 【深基6.例6】文字处理软件
+
+//P5734 【深基6.例6】文字处理软件
+int main(){
+	int q;
+	int i, j;
+	string doc;
+	cin >> q >> doc;
+	string s[q+1];
+	for(i = 0; i <= q; i++){
+		getline(cin,s[i]);
+	}
+	for(i = 1; i <= q; i++){
+		//1st
+		if(s[i][0] == '1'){
+			for(j = 2; j < s[i].size(); j++){
+				doc += s[i][j];
+			}
+			cout << doc << endl;
+		}
+		//2nd&3rd
+		if(s[i][0] == '2' || s[i][0] == '3'){
+			string a,b;
+			for(j = 2; j < s[i].size(); j++){
+				if(s[i][j] != ' '){
+					a += s[i][j];
+				}
+                else break;
+			}
+			for(int k = j; k < s[i].size(); k++){
+				b += s[i][k];
+			}	
+			if(s[i][0] == '2'){
+				int a1 = stoi(a);
+				int b1 = stoi(b);
+				string temp;
+				for(j = a1; j < a1+b1; j++){
+					temp += s[i][j];
+				}
+				cout << temp << endl;				
+			}
+			if(s[i][0] == '3'){
+				int a1 = stoi(a);
+                string temp1 = doc;
+				temp1.insert(a1, b);
+				cout << temp1 << endl;
+			}
+		}
+		//4th
+		if(s[i][0] == '4'){
+			string a;
+			for(j = 2; j < s[i].size(); j++){
+				if(s[i][j] != ' '){
+					a += s[i][j];
+				}
+			}
+			for(j = 0; j < doc.size(); j++){
+				if(doc.substr(j, a.size()) == a) {
+                    cout << j << endl;
+                    break;
+                }
+				else cout << "-1" << endl;
+				
+			}
+		}
+	} 
+}
