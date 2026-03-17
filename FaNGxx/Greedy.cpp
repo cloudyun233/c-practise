@@ -41,7 +41,6 @@ bool cmp(Node x, Node y){
     else return x.a > y.a;
 }
 int main(){
-    int n;
     cin >> n;
     int i,j = 0;
     for(i = 1; i <= n; i++){
