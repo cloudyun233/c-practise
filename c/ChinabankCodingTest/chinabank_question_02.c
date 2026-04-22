@@ -113,85 +113,80 @@ int maxSumAfterReverse(int** matrix, int rows, int cols, int reverseRow) {
  * 规则：有x个节点，返回所有可能的链表（eg：{1},{2},{2}，所有可能为{1,2,2}，{2,1,2}，{2,2,1}）
  * 输入：节点值数组，数组长度
  * 输出：打印所有可能的链表
+ *
+ * 解题思路：
+ * 1. 本质是求数组的"全排列"（去重）
+ * 2. 用递归+回溯：每次选一个没用过的数放到当前位置，递归填下一个位置
+ * 3. 先排序，相同数字只选一次，避免重复排列
+ * 4. 题目只要求打印，不需要真正创建链表节点，直接用数组打印即可
  */
-// 链表节点结构
+
+// 链表节点结构（保留定义，实际打印时不需要用到）
 typedef struct ListNode {
-    int val;
-    struct ListNode* next;
+    int val;               // 节点存储的值
+    struct ListNode* next; // 指向下一个节点的指针
 } ListNode;
 
-// 创建新节点
-ListNode* createNode(int val) {
-    ListNode* node = (ListNode*)malloc(sizeof(ListNode));
-    node->val = val;
-    node->next = NULL;
-    return node;
-}
-
-// 打印链表
-void printList(ListNode* head) {
+// 打印链表（直接从数组打印，不实际创建链表）
+void printListFromArray(int* nums, int size) {
     printf("{");
-    while (head != NULL) {
-        printf("%d", head->val);
-        if (head->next != NULL) {
-            printf(",");
-        }
-        head = head->next;
+    for (int i = 0; i < size; i++) {
+        printf("%d", nums[i]);
+        if (i < size - 1) printf(",");  // 最后一个元素后面不加逗号
     }
     printf("}\n");
 }
 
-// 释放链表内存
-void freeList(ListNode* head) {
-    while (head != NULL) {
-        ListNode* temp = head;
-        head = head->next;
-        free(temp);
-    }
-}
-
-// 生成所有排列
-void generatePermutations(int* nums, int numsSize, int* used, int* current, int index, ListNode** lists, int* listCount) {
+/**
+ * 递归生成排列（回溯法）
+ * @param nums      原始数组（已排序）
+ * @param numsSize  数组长度
+ * @param used      标记数组，used[i]=1 表示 nums[i] 已被使用
+ * @param current   当前正在填充的排列
+ * @param index     当前要填充的位置（第几个数）
+ *
+ * 执行流程示例：nums = {1,2,2}
+ *   index=0: 选1 -> current[0]=1, used[0]=1
+ *     index=1: 选2 -> current[1]=2, used[1]=1
+ *       index=2: 选2 -> current[2]=2, used[2]=1 -> 打印 {1,2,2}
+ *       回溯：used[2]=0
+ *     回溯：used[1]=0
+ *     index=1: 再选2（第二个2）-> 同理...
+ */
+void generatePermutations(int* nums, int numsSize, int* used, int* current, int index) {
+    // 递归终止条件：所有位置都填好了
     if (index == numsSize) {
-        // 创建链表
-        ListNode* head = NULL;
-        ListNode* tail = NULL;
-        for (int i = 0; i < numsSize; ++i) {
-            ListNode* node = createNode(current[i]);
-            if (head == NULL) {
-                head = node;
-                tail = node;
-            } else {
-                tail->next = node;
-                tail = node;
-            }
-        }
-        lists[*listCount] = head;
-        (*listCount)++;
+        printListFromArray(current, numsSize);  // 打印这个排列
         return;
     }
     
-    // 避免重复排列
-    int lastUsed = -1;
-    for (int i = 0; i < numsSize; ++i) {
+    int lastUsed = -1;  // 记录上一次使用的数字，用于跳过重复数字
+    for (int i = 0; i < numsSize; i++) {
+        // 两个条件：
+        // 1. !used[i]        -> 这个位置的数字还没被用过
+        // 2. nums[i] != lastUsed -> 和上一次用的数字不同（去重）
         if (!used[i] && nums[i] != lastUsed) {
-            used[i] = 1;
-            current[index] = nums[i];
-            generatePermutations(nums, numsSize, used, current, index + 1, lists, listCount);
-            used[i] = 0;
-            lastUsed = nums[i];
+            used[i] = 1;                // 标记为已使用
+            current[index] = nums[i];   // 填入当前位置
+            generatePermutations(nums, numsSize, used, current, index + 1);  // 递归填下一个位置
+            used[i] = 0;                // 回溯：撤销标记，让后面的循环还能用这个数字
+            lastUsed = nums[i];         // 记录这次用了什么，下次循环跳过相同的
         }
     }
 }
 
+/**
+ * 入口函数：生成并打印所有可能的链表排列
+ * @param nums      节点值数组
+ * @param numsSize  数组长度
+ */
 void generateAllLists(int* nums, int numsSize) {
-    if (numsSize == 0) {
-        return;
-    }
+    if (numsSize == 0) return;  // 空数组直接返回
     
-    // 排序数组，方便去重
-    for (int i = 0; i < numsSize - 1; ++i) {
-        for (int j = i + 1; j < numsSize; ++j) {
+    // 第一步：冒泡排序（升序）
+    // 为什么要排序？因为去重逻辑依赖相同数字相邻
+    for (int i = 0; i < numsSize - 1; i++) {
+        for (int j = i + 1; j < numsSize; j++) {
             if (nums[i] > nums[j]) {
                 int temp = nums[i];
                 nums[i] = nums[j];
@@ -200,22 +195,16 @@ void generateAllLists(int* nums, int numsSize) {
         }
     }
     
-    int* used = (int*)calloc(numsSize, sizeof(int));
-    int* current = (int*)malloc(numsSize * sizeof(int));
-    ListNode** lists = (ListNode**)malloc(1000 * sizeof(ListNode*));  // 假设最多1000种排列
-    int listCount = 0;
+    // 第二步：分配辅助数组
+    int* used = (int*)calloc(numsSize, sizeof(int));   // 全部初始化为0，表示都没用过
+    int* current = (int*)malloc(numsSize * sizeof(int));  // 存放当前正在生成的排列
     
-    generatePermutations(nums, numsSize, used, current, 0, lists, &listCount);
+    // 第三步：开始递归生成排列
+    generatePermutations(nums, numsSize, used, current, 0);
     
-    // 打印所有链表
-    for (int i = 0; i < listCount; ++i) {
-        printList(lists[i]);
-        freeList(lists[i]);
-    }
-    
+    // 第四步：释放内存
     free(used);
     free(current);
-    free(lists);
 }
 
 /*
