@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <windows.h>
 
 /*
  * 问题1：判断数字的大小
@@ -294,6 +295,7 @@ int countPossibleEdges(int** graph, int n, int start, int end) {
  * 主函数：测试上述五个函数
  */
 int main() {
+    SetConsoleOutputCP(65001);
     printf("===== 问题1测试 =====\n");
     printf("数字 12345: %d\n", getDigit(12345));
     printf("数字 678900: %d\n", getDigit(678900));

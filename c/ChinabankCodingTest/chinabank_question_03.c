@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <windows.h>
 
 /*
  * 问题1：字符串公共字符替换
@@ -269,6 +270,7 @@ int maxValidExpressionLength(char* s) {
  * 主函数：测试上述四个函数
  */
 int main() {
+    SetConsoleOutputCP(65001);
     printf("===== 问题1测试 =====\n");
     printf("字符串1: \"hello\", 字符串2: \"world\" -> %s\n", replaceCommonChars("hello", "world"));
     printf("字符串1: \"abcde\", 字符串2: \"ace\" -> %s\n", replaceCommonChars("abcde", "ace"));
