@@ -185,7 +185,7 @@ using namespace std;
 
 
 //P2437 蜜蜂路线
-//1
+//1滚动变量
 // int main(){
 //     int m, n;
 //     cin >> m >> n;
@@ -202,7 +202,7 @@ using namespace std;
 //     cout << last << endl;
 // }
 
-//2
+//2递归
 // int find(int m, int n,  vector<int> dp){
 //     if(n == m) return 1;
 //     if(n == m+1) return 1;
@@ -253,3 +253,44 @@ using namespace std;
 //     }
 // }
 
+//P1464 [PacNW 1999] Function
+// int main(){
+//     int a, b ,c;
+//     while (cin >> a >> b >> c)
+//     {
+        
+//     }
+    
+// }
+
+//P1036 [NOIP 2002 普及组] 选数
+int ans, a[30], k, n;
+bool isprime(int x){//判断素数
+    if(x == 1) return false;
+    for(int i = 2; i*i <= x; i++){
+        if(x % i == 0) return false;
+    }
+
+    return true;
+}
+
+void dfs(int now,int sum, int j){//
+    if(now == k){
+        if(isprime(sum)) ++ans;
+        return;
+    }
+
+    for(int i = j; i <= n - (k - now - 1); ++i){
+        dfs(now+1, sum + a[i], i+1);
+    }
+    return;
+}
+
+int main(){
+    cin >> n >> k;
+    for(int i = 1; i <= n ;++i){
+        cin >> a[i];
+    }
+    dfs(0, 0, 1);
+    cout << ans << endl;
+}

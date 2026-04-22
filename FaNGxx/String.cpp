@@ -210,3 +210,121 @@ using namespace std;
 
 //P3370 【模板】字符串哈希
 //不会
+
+//P2543 [AHOI2004] 奇怪的字符串
+
+//1暴力（有问题）
+// int main(){
+//     string x, y;
+//     cin >> x >> y;
+//     int i=0, j=0, len[9999] = {0};
+//     for(i = 0; i < x.size(); i++){
+//         int k = i;
+//         j = 0;
+//         while(k < x.size()){
+//             if(x[k] == y[j]){
+//                 k++;
+//                 len[i]++;
+//             } 
+//             else{
+//                 if(j >= y.size()){
+//                     break;
+//                 } 
+//             }
+//             j++;
+//         }
+//         if(k == x.size()) break;
+//     }
+
+//     int max_len = 0;
+//     for(j = 0; j <= i; j++){
+//         max_len = max(len[i], max_len);
+//     }
+//     cout << max_len << endl;
+// }
+
+//dp
+// int dp[10000][10000] = {0};
+// int main(){
+//     string x, y;
+//     cin >> x >> y;
+//     int i, j;
+//     for(i = 1; i <= x.size(); i++){
+//         for(j = 1; j <= y.size(); j++){
+//             dp[i][j] = max(dp[i-1][j], dp[i][j-1]);
+//             if(x[i-1] == y[j-1]) dp[i][j] = max(dp[i][j], dp[i-1][j-1]+1);
+//         }
+//     }
+
+//     cout << dp[x.size()][y.size()] << endl;
+// }
+
+//pipoj1026: a+b问题
+string s;//表达式
+int main(){
+    while(getline(cin, s)){
+        string t[2];
+        int i = 0, j = 0;
+        while(i < s.size()){
+            if(s[i] == '='){
+                break;
+            }
+
+            if(s.substr(i,3) == "one"){
+                i += 4;
+                t[j] += '1';
+            }
+            else if(s.substr(i,3) == "two"){
+                i += 4;
+                t[j] += '2';
+            }
+            else if(s.substr(i,5) == "three"){
+                i += 6;
+                t[j] += '3';
+            }
+            else if(s.substr(i,4) == "four"){
+                i += 5;
+                t[j] += '4';
+            }
+            else if(s.substr(i,4) == "five"){
+                i += 5;
+                t[j] += '5';
+            }
+            else if(s.substr(i,3) == "six"){
+                i += 4;
+                t[j] += '6';
+            }
+            else if(s.substr(i,5) == "seven"){
+                i += 6;
+                t[j] += '7';
+            }
+            else if(s.substr(i,5) == "eight"){
+                i += 6;
+                t[j] += '8';
+            }
+            else if(s.substr(i,4) == "nine"){
+                i += 5;
+                t[j] += '9';
+            }
+            else if(s.substr(i,4) == "zero"){
+                i += 5;
+                t[j] += '0';            
+            }
+            else if(s[i] == '+'){
+                i += 2;
+                j++;
+            }
+            else break;
+        }
+        if(t[0] == "0" && t[1] == "0") return 0;
+        else{
+            int a = stoi(t[0]);
+            int b = stoi(t[1]);
+            int ans = a + b;
+            cout << ans << endl;
+
+        }
+
+    }
+
+}
