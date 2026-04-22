@@ -42,60 +42,67 @@ char* findMaxPassword(char* s) {
     char temp[1000];
     strcpy(temp, s);
 
-    // 反复删除所有"BAC"子串
-    while (1) {
-        char* p = strstr(temp, "BAC");
-        if (!p) break;
-        char* q = p + 3;
-        while (*q) *p++ = *q++;
-        *p = '\0';
+    // 第一步：反复删除所有"BAC"子串，直到没有"BAC"为止
+    char* p;
+    while ((p = strstr(temp, "BAC")) != NULL) {
+        char* q = p + 3;          // q指向"BAC"后面的字符
+        while (*q != '\0') {
+            *p = *q;               // 向前移动字符
+            p++;
+            q++;
+        }
+        *p = '\0';                 // 添加字符串结束符
     }
 
-    int len = strlen(temp);
-    int best_start = -1, best_len = 0;
-    int i = 0;
-    while (i < len) {
-        if (isdigit(temp[i])) {
-            int start = i;
-            while (i < len && isdigit(temp[i])) i++;
-            int cur_len = i - start;
+    // 第二步：找最长且最大的数字串
+    int best_start = -1;           // 最佳数字串的起始位置（-1表示还没找到）
+    int best_len = 0;              // 最佳数字串的长度
 
+    int i = 0;
+    while (temp[i] != '\0') {
+        // 如果遇到数字字符，开始提取数字串
+        if (isdigit(temp[i])) {
+            int start = i;         // 记录数字串起始位置
+
+            // 连续取出所有连续数字
+            while (temp[i] != '\0' && isdigit(temp[i])) {
+                i++;
+            }
+            int cur_len = i - start;   // 当前数字串长度
+
+            // 第一次找到数字串，直接记录
             if (best_start == -1) {
                 best_start = start;
                 best_len = cur_len;
-            } else {
-                // 比较两个数字段的大小（处理前导零）
-                int cur_off = start;
-                while (cur_off < start + cur_len && temp[cur_off] == '0') cur_off++;
-                int cur_val_len = (start + cur_len) - cur_off;
-
-                int best_off = best_start;
-                while (best_off < best_start + best_len && temp[best_off] == '0') best_off++;
-                int best_val_len = (best_start + best_len) - best_off;
-
-                if (cur_val_len > best_val_len) {
+            }
+            // 比较当前数字串和之前的最佳数字串
+            else {
+                // 比较长度，长度大的更大
+                if (cur_len > best_len) {
                     best_start = start;
                     best_len = cur_len;
-                } else if (cur_val_len == best_val_len && cur_val_len > 0) {
-                    if (strncmp(temp + cur_off, temp + best_off, cur_val_len) > 0) {
+                }
+                // 长度相同时，用字符串比较（字典序）
+                else if (cur_len == best_len) {
+                    if (strncmp(temp + start, temp + best_start, cur_len) > 0) {
                         best_start = start;
                         best_len = cur_len;
                     }
-                } else if (cur_val_len == 0 && best_val_len == 0) {
-                    // 都是0，保留原来的（数值相等）
                 }
             }
         } else {
-            i++;
+            i++;                    // 非数字字符，跳过
         }
     }
 
+    // 第三步：返回结果
     if (best_start == -1) {
-        strcpy(result, "-1");
+        strcpy(result, "-1");      // 没有找到数字，返回"-1"
     } else {
         strncpy(result, temp + best_start, best_len);
         result[best_len] = '\0';
     }
+
     return result;
 }
 
@@ -108,30 +115,36 @@ char* findMaxPassword(char* s) {
  * 输出：对应的IP地址字符串，如果非法（超出0~2^32-1范围）则输出"invalid"
  */
 char* ipAddress(long long num) {
-    static char result[20];
+    static char result[20];  // 用static保存返回值，函数返回后仍有效
+
+    // ========== 第一步：检查输入是否合法 ==========
+    // IP地址本质是一个32位的二进制数
+    // 最小值是0，最大值是2^32-1 = 4294967295（十六进制0xFFFFFFFF）
+    // 0xFFFFFFFFLL 是long long类型的最大值（末尾LL表示long long）
     if (num < 0 || num > 0xFFFFFFFFLL) {
         strcpy(result, "invalid");
         return result;
     }
-    char hex[9];   // 8位十六进制 + '\0'
-    sprintf(hex, "%08llX", (unsigned long long)num);  // 大写，不足8位补零
 
-    int parts[4];
-    int ok = 1;
-    for (int i = 0; i < 4; ++i) {
-        char seg[3] = {hex[i*2], hex[i*2+1], '\0'};
-        int val = (int)strtol(seg, NULL, 16);
-        if (val < 0 || val > 255) {
-            ok = 0;
-            break;
-        }
-        parts[i] = val;
-    }
-    if (!ok) {
-        strcpy(result, "invalid");
-    } else {
-        sprintf(result, "%d.%d.%d.%d", parts[0], parts[1], parts[2], parts[3]);
-    }
+    // ========== 第二步：提取IP地址的4个部分 ==========
+    // IP地址格式是 a.b.c.d，每部分占1字节（8位），范围0~255
+    // 使用位运算直接从32位数中提取每一段，比字符串转换更直观
+
+    // 把输入转成无符号32位整数，方便位运算
+    unsigned int ip = (unsigned int)num;
+    
+    // 提取第一段（最高8位）：右移24位，再用0xFF掩码取低8位
+    int part1 = (ip >> 24) & 0xFF;
+    // 提取第二段：右移16位，取低8位
+    int part2 = (ip >> 16) & 0xFF;
+    // 提取第三段：右移8位，取低8位
+    int part3 = (ip >> 8) & 0xFF;
+    // 提取第四段（最低8位）：直接取低8位
+    int part4 = ip & 0xFF;
+
+    // ========== 第三步：组装IP地址字符串 ==========
+    // 格式化输出为 "a.b.c.d" 的形式
+    sprintf(result, "%d.%d.%d.%d", part1, part2, part3, part4);
     return result;
 }
 
@@ -140,16 +153,33 @@ char* ipAddress(long long num) {
  * 输入：货币面额数组 money，数组长度 n
  * 输出：无法凑出的最小正整数金额
  */
+
+// qsort排序需要的比较函数：升序排列
 int cmp_int(const void* a, const void* b) {
-    return *(int*)a - *(int*)b;
+    return *(int*)a - *(int*)b;  // 返回负数表示a<b，正数表示a>b，0表示相等
 }
+
 int minImpossibleSum(int* money, int n) {
+    // ========== 第一步：排序 ==========
+    // 贪心算法的关键：必须从小到大排序，才能逐步覆盖连续金额
     qsort(money, n, sizeof(int), cmp_int);
-    int res = 1;   // 当前能凑出的最大连续金额+1
+
+    // ========== 第二步：贪心遍历 ==========
+    // res 的含义：当前能凑出的「最大连续金额」+ 1
+    // 初始值为1，因为我们要找的是「最小正整数」
+    int res = 1;
+
     for (int i = 0; i < n; ++i) {
-        if (money[i] > res) break;
+        // 如果当前面额 > res，说明 res 无法凑出，直接返回
+        // 例如：当前能凑出1~4，下一个面额是6，那么5就无法凑出
+        if (money[i] > res) {
+            break;
+        }
+        // 否则，把当前面额加入，更新能凑出的最大连续金额
+        // 例如：能凑1~4，加上面额5，就能凑1~9
         res += money[i];
     }
+
     return res;
 }
 
