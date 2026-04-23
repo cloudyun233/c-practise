@@ -205,70 +205,89 @@ char* smallestNumber(char* s) {
  * 规则：给一个字符串，里面只包含"+"，"-"和数字，返回合法算式的最大长度，"01"、"+12""3-"不合法
  * 输入：字符串
  * 输出：最大合法长度
+ *
+ * 算法思路：枚举所有可能的子串，对每个子串检查是否构成合法算式
+ * 什么是合法算式？
+ *   1. 必须以数字开头（不能以操作符开头）
+ *   2. 数字不能有前导零（如"01"不合法，但单独的"0"合法）
+ *   3. 操作符不能连续出现（如"+-"不合法）
+ *   4. 不能以操作符结尾（如"3-"不合法）
+ *
+ * 我们使用"状态机"来跟踪解析进度：
+ *   状态0（初始状态）：期待一个数字作为开头
+ *   状态1（数字状态）：正在读取一个数字，期待数字或操作符
+ *   状态2（操作符状态）：刚读完一个操作符，期待下一个数字
  */
 int maxValidExpressionLength(char* s) {
-    int maxLen = 0;
-    int currentLen = 0;
-    int n = strlen(s);
-    
+    int maxLen = 0;      // 记录找到的最长合法算式长度
+    int n = strlen(s);   // 字符串总长度
+
+    /* 外层循环：从每个位置开始尝试作为算式的起点 */
     for (int i = 0; i < n; ++i) {
-        // 状态机：0-初始状态，1-数字状态，2-操作符状态
-        int state = 0;
-        int len = 0;
-        bool valid = true;
-        
+        int state = 0;   // 当前状态：0=初始，1=数字，2=操作符
+        int len = 0;      // 当前子串的长度
+        bool valid = true; // 当前子串是否仍然合法
+
+        /* 内层循环：从起点i向后扩展，尝试构建合法算式 */
         for (int j = i; j < n; ++j) {
             char c = s[j];
-            
+
+            /* 状态0：期待数字作为开头
+             * 只有数字才能作为算式的第一个字符 */
             if (state == 0) {
                 if (isdigit(c)) {
+                    /* 检查前导零：如果当前是'0'且后面还有数字，说明有前导零 */
                     if (c == '0' && j + 1 < n && isdigit(s[j + 1])) {
-                        // 避免"01"这样的情况
-                        valid = false;
+                        valid = false;  // "01"这种形式不合法
                         break;
                     }
-                    state = 1;
-                    len++;
+                    state = 1;  // 切换到数字状态
+                    len++;      // 长度加1
                 } else {
-                    // 操作符不能作为开头
-                    valid = false;
+                    valid = false;  // 操作符不能作为开头
                     break;
                 }
+
+            /* 状态1：正在读数字，可以继续读数字或遇到操作符结束数字 */
             } else if (state == 1) {
                 if (isdigit(c)) {
-                    len++;
+                    len++;  // 继续是数字，长度加1
                 } else if (c == '+' || c == '-') {
-                    state = 2;
+                    state = 2;  // 遇到操作符，切换到操作符状态
                     len++;
                 } else {
-                    valid = false;
+                    valid = false;  // 出现其他字符（如空格）不合法
                     break;
                 }
+
+            /* 状态2：刚读完操作符，后面必须跟数字，不能再跟操作符 */
             } else if (state == 2) {
                 if (isdigit(c)) {
+                    /* 同样要检查前导零："+01"或"-02"不合法 */
                     if (c == '0' && j + 1 < n && isdigit(s[j + 1])) {
-                        // 避免"+01"这样的情况
                         valid = false;
                         break;
                     }
-                    state = 1;
+                    state = 1;  // 读到了数字，切换回数字状态
                     len++;
                 } else {
-                    // 操作符不能连续
-                    valid = false;
+                    valid = false;  // 操作符后面不能跟操作符
                     break;
                 }
             }
         }
-        
-        // 操作符不能作为结尾
+
+        /* 循环结束后检查：
+         * 1. 整个过程中没有出现invalid情况
+         * 2. 最后不能在操作符状态（算式不能以操作符结尾）
+         * 只有都满足才算一个合法算式 */
         if (valid && state != 2) {
             if (len > maxLen) {
                 maxLen = len;
             }
         }
     }
-    
+
     return maxLen;
 }
 
