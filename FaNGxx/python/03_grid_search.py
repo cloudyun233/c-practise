@@ -3,6 +3,7 @@
 基于网格搜索的短时交通量预测研究 —— 网格搜索参数优化模块
 作者：方义凯   学号：632210040410
 修改：添加结果保存功能、修复TensorFlow资源泄漏问题
+修改2：将ARIMA静态预测替换为真正的单步滚动预测，修复阶梯状曲线问题
 """
 
 import numpy as np
@@ -15,7 +16,75 @@ from sklearn.model_selection import KFold
 from models_02 import (build_lstm, build_bigru, train_arima,
                        predict_arima, compute_metrics,
                        adf_stationary_test, ljung_box_white_noise_test,
-                       get_pq_range_by_acf_pacf, predict_arima_static)
+                       get_pq_range_by_acf_pacf)
+
+# ──────────────────────────────────────────────
+# 【新增】ARIMA 真正的单步滚动预测函数
+# 替换原来的 predict_arima_static（每20步才重拟合，导致阶梯状曲线）
+# ──────────────────────────────────────────────
+def predict_arima_rolling(order: tuple,
+                          train_series: np.ndarray,
+                          val_series: np.ndarray,
+                          refit_interval: int = 50,
+                          verbose: bool = False) -> np.ndarray:
+    """
+    ARIMA 单步滚动预测（Walk-Forward Validation）。
+    每预测一步后将真实值追加到历史，再预测下一步，彻底消除阶梯状曲线。
+
+    使用 append() 增量更新模型（statsmodels 推荐方式），
+    每隔 refit_interval 步完整重拟合一次以防参数漂移。
+
+    参数
+    ----
+    order           : ARIMA 的 (p, d, q) 阶数
+    train_series    : 训练集序列（用作初始历史）
+    val_series      : 待预测序列（验证集）
+    refit_interval  : 每隔多少步完整重拟合一次（默认50）
+    verbose         : 是否打印进度
+    """
+    from statsmodels.tsa.arima.model import ARIMA
+
+    predictions = []
+    n = len(val_series)
+
+    # 初始完整拟合
+    model = ARIMA(train_series, order=order)
+    fitted_model = model.fit()
+
+    for t in range(n):
+        try:
+            yhat = fitted_model.forecast(steps=1)[0]
+        except Exception as e:
+            recent = list(train_series) + list(val_series[:t])
+            yhat = float(np.mean(recent[-20:])) if len(recent) >= 20 else float(np.mean(recent))
+            if verbose:
+                print(f"  [WARN] t={t} forecast失败: {e}，使用历史均值 {yhat:.4f}")
+
+        predictions.append(yhat)
+
+        # 用真实值增量更新模型
+        try:
+            fitted_model = fitted_model.append([val_series[t]], refit=False)
+        except Exception:
+            history = list(train_series) + list(val_series[:t + 1])
+            model = ARIMA(history, order=order)
+            fitted_model = model.fit()
+
+        # 每隔 refit_interval 步完整重拟合，防止参数长期漂移
+        if (t + 1) % refit_interval == 0:
+            try:
+                history = list(train_series) + list(val_series[:t + 1])
+                model = ARIMA(history, order=order)
+                fitted_model = model.fit()
+            except Exception as e:
+                if verbose:
+                    print(f"  [WARN] t={t} 定期重拟合失败: {e}，保持当前模型")
+
+        if verbose and (t + 1) % 100 == 0:
+            print(f"  [滚动预测] {t + 1}/{n} 步完成")
+
+    return np.array(predictions)
+
 
 def _kfold_score_dl(model_fn, build_kwargs, train_kwargs,
                     X_full, y_full, n_splits=5, look_back=30):
@@ -51,10 +120,10 @@ def _kfold_score_dl(model_fn, build_kwargs, train_kwargs,
 
 
 LSTM_PARAM_GRID = {
-    "units":      [64, 128],
+    "units":      [32, 64, 128],
     "lr":         [0.001, 0.01],
-    "dropout":    [0.1, 0.2],
-    "batch_size": [64, 128],
+    "dropout":    [0.2, 0.3],
+    "batch_size": [32, 64],
 }
 
 def lstm_grid_search(X_train, y_train, look_back=30, n_splits=3,
@@ -105,10 +174,10 @@ def lstm_grid_search(X_train, y_train, look_back=30, n_splits=3,
 
 
 BIGRU_PARAM_GRID = {
-    "units":      [64, 128],
+    "units":      [32, 64, 128],
     "lr":         [0.001, 0.01],
-    "epochs":     [50, 100],
-    "batch_size": [64],
+    "dropout":    [0.2, 0.3],
+    "batch_size": [32, 64],
 }
 
 def bigru_grid_search(X_train, y_train, look_back=30, n_splits=3,
@@ -134,9 +203,9 @@ def bigru_grid_search(X_train, y_train, look_back=30, n_splits=3,
                 build_kwargs={"look_back": look_back,
                               "units": params["units"],
                               "lr": params["lr"],
-                              "dropout": 0.2},
+                              "dropout": params["dropout"]},
                 train_kwargs={"batch_size": params["batch_size"],
-                              "epochs": params["epochs"]},
+                              "epochs": 15},  # 减少epochs加快搜索
                 X_full=X_train, y_full=y_train,
                 n_splits=n_splits, look_back=look_back
             )
@@ -169,7 +238,9 @@ def arima_grid_search(train_series: np.ndarray,
                       param_grid=None,
                       verbose=True):
     """
-    ARIMA网格搜索定阶（简化版）
+    ARIMA网格搜索定阶
+    【修改】使用 predict_arima_rolling 替代 predict_arima_static，
+    消除因多步外推导致的阶梯状预测曲线。
     """
     from statsmodels.tsa.arima.model import ARIMA
     from sklearn.metrics import mean_squared_error
@@ -213,33 +284,42 @@ def arima_grid_search(train_series: np.ndarray,
     combos = list(itertools.product(*param_grid.values()))
     total = len(combos)
     print(f"\n[ARIMA 网格搜索] 参数组合总数：{total}")
+    print("[INFO] 使用单步滚动预测（Walk-Forward），每50步重拟合一次")
     best_aic, best_rmse, best_order, all_results = np.inf, np.inf, None, []
 
     # 步骤4：网格搜索
     for i, combo in enumerate(combos):
         p, d, q = combo
+        t0 = time.time()
         try:
-            # 拟合ARIMA模型（最简形式）
+            # 先拟合一次，获取 AIC/BIC
             model = ARIMA(train_series, order=(p, d, q))
             fitted_model = model.fit()
-            
-            # 单步滚动预测验证集
-            pred = predict_arima_static(fitted_model, val_series, train_series, refit_step=20)
-            
-            # 计算指标
-            rmse = np.sqrt(mean_squared_error(val_series, pred))
             aic = fitted_model.aic
             bic = fitted_model.bic
-            
+
+            # ── 关键修改：单步滚动预测，彻底消除阶梯状曲线 ──
+            pred = predict_arima_rolling(
+                order=(p, d, q),
+                train_series=train_series,
+                val_series=val_series,
+                refit_interval=50,   # 每50步完整重拟合，平衡速度与准确性
+                verbose=False
+            )
+
+            # 计算指标
+            rmse = np.sqrt(mean_squared_error(val_series, pred))
+
         except Exception as e:
             import traceback
             if verbose:
                 print(f"  [{i + 1}/{total}] ARIMA({p},{d},{q}) → 失败: {e}")
                 traceback.print_exc()
-            all_results.append({"p": p, "d": d, "q": q, "rmse": float('inf'), 
-                              "aic": float('inf'), "bic": float('inf')})
+            all_results.append({"p": p, "d": d, "q": q, "rmse": float('inf'),
+                                 "aic": float('inf'), "bic": float('inf')})
             continue
 
+        elapsed = time.time() - t0
         all_results.append({
             "p": p, "d": d, "q": q,
             "rmse": round(float(rmse), 6),
@@ -247,7 +327,8 @@ def arima_grid_search(train_series: np.ndarray,
             "bic": round(float(bic), 2)
         })
         if verbose:
-            print(f"  [{i + 1}/{total}] ARIMA({p},{d},{q}) → RMSE={rmse:.6f}, AIC={aic:.2f}")
+            print(f"  [{i + 1}/{total}] ARIMA({p},{d},{q}) → RMSE={rmse:.6f}, "
+                  f"AIC={aic:.2f}  ({elapsed:.1f}s)")
 
         # 选择最优（优先AIC，参考RMSE）
         if aic < best_aic and rmse < best_rmse * 1.1:
@@ -303,7 +384,7 @@ if __name__ == "__main__":
     print(f"[INFO] 交叉验证折数: 3")
     print(f"[INFO] 训练轮数: 15 (搜索阶段)")
     best_lstm, lstm_results = lstm_grid_search(X_train, y_train, look_back=30, n_splits=3)
-    
+
     # 确保所有值都是可序列化的
     lstm_results_serializable = []
     for r in lstm_results:
@@ -316,21 +397,21 @@ if __name__ == "__main__":
             else:
                 serializable_r[k] = v
         lstm_results_serializable.append(serializable_r)
-    
+
     with open("lstm_grid_results.json", "w", encoding="utf-8") as f:
         json.dump(lstm_results_serializable, f, indent=2, ensure_ascii=False)
     print("LSTM 搜索结果已保存至 lstm_grid_results.json")
-    
+
     print("\n" + "=" * 50)
     print("开始 Bi-GRU 网格搜索...")
     print(f"[INFO] 参数组合数: {len(list(itertools.product(*BIGRU_PARAM_GRID.values())))}")
-    
+
     # 清除Keras会话
     tf.keras.backend.clear_session()
     gc.collect()
-    
+
     best_bigru, bigru_results = bigru_grid_search(X_train, y_train, look_back=30, n_splits=3)
-    
+
     # 确保所有值都是可序列化的
     bigru_results_serializable = []
     for r in bigru_results:
@@ -343,7 +424,7 @@ if __name__ == "__main__":
             else:
                 serializable_r[k] = v
         bigru_results_serializable.append(serializable_r)
-    
+
     with open("bigru_grid_results.json", "w", encoding="utf-8") as f:
         json.dump(bigru_results_serializable, f, indent=2, ensure_ascii=False)
     print("Bi-GRU 搜索结果已保存至 bigru_grid_results.json")
@@ -364,9 +445,9 @@ if __name__ == "__main__":
                 elif np.isnan(v):
                     serializable_r[k] = -999999.99  # 用一个大负数代替NaN
                 else:
-                    serializable_r[k] = round(float(v), 2)
+                    serializable_r[k] = round(float(v), 6)
             elif isinstance(v, (np.floating,)):
-                serializable_r[k] = round(float(v), 2)
+                serializable_r[k] = round(float(v), 6)
             elif isinstance(v, (np.integer, int)):
                 serializable_r[k] = int(v)
             else:

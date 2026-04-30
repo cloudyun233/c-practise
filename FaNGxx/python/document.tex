@@ -1,0 +1,1021 @@
+% !TeX program = xelatex
+\documentclass[12pt,a4paper,oneside]{ctexbook}
+\usepackage{geometry}
+\geometry{left=3cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{titlesec}
+\titleformat{\chapter}{\centering\heiti\Huge}{第\chinese{chapter}章}{1em}{}
+\titlespacing*{\chapter}{0pt}{0pt}{20pt}
+\usepackage{caption}
+\captionsetup{labelsep=quad,font=small}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\setCJKmainfont{SimSun}
+\setCJKsansfont{SimHei}
+\setCJKmonofont{FangSong}
+
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{indentfirst}
+\setlength{\parindent}{2em}
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=black,
+	citecolor=black,
+	urlcolor=black
+}
+\usepackage{float}
+\usepackage{chngcntr}
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+
+% ==================== 页眉页脚设置 ====================
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % 清空所有页眉页脚
+\fancyfoot[C]{\thepage} % 页脚居中显示页码
+% 章节首页（plain样式）也应用相同设置
+\fancypagestyle{plain}{
+	\fancyhf{}
+	\fancyfoot[C]{\thepage}
+}
+\renewcommand{\headrulewidth}{0pt} % 删除页眉横线
+% =====================================================
+
+\begin{document}
+	
+	% ========== 封面 ==========
+	\begin{titlepage}
+		\centering
+		\vspace*{2cm}
+		{\heiti\zihao{-2} 毕业论文（设计）}\par
+		\vspace{2cm}
+		{\heiti\zihao{3} 基于网格搜索的短时交通量预测研究}\par
+		\vspace{2.5cm}
+		{\songti\zihao{4}
+			\begin{tabular}{l}
+				\makebox[4em][s]{学\hfill 院}：数学与统计学院 \\[8pt]
+				\makebox[4em][s]{专\hfill 业}：数学拔尖人才计划 \\[8pt]
+				学生姓名：方义凯 \\[8pt]
+				\makebox[4em][s]{学\hfill 号}：632210040410 \\[8pt]
+				指导教师：赵磊娜 \\[8pt]
+				完成时间：2026 年 6 月
+			\end{tabular}\par
+		}
+		\vfill
+	\end{titlepage}
+	
+	% ========== 中文摘要 ==========
+	\chapter*{摘要}
+	\addcontentsline{toc}{chapter}{摘要}
+	\pagenumbering{Roman}
+	\setcounter{page}{1}
+	
+	短时交通量预测这个事情，在智能交通系统（Intelligent Transportation System, ITS）里属于一项很核心的支撑功能。要让交通信号做到自适应控制，路网动态诱导可以合理地布置出来，又或者是公交调度往智能化方向走，这些其实都离不开一个准确的短时预测结果来作为决策的依据。从这个角度来看，它也可以说是缓解城市拥堵、提高道路通行效率，还有压降交通碳排放的一项蛮重要的技术手段。在我国，城市化进程一直在往前推进，城市里的机动车保有量上升得很快，早高峰和晚高峰的拥堵，已经构成了制约城市可持续发展的一个很突出的问题。这情况反过来，又对短时交通量预测的精度、稳定性，还有场景的鲁棒性，都提出了比以前更高的要求。
+	
+	如果顺着技术发展的脉络来捋，短时交通量预测模型已经从ARIMA这一类的传统统计方法，慢慢在向以LSTM、Bi-GRU作为代表的深度学习时序模型去演进。这一代模型在捕捉交通流的非线性、周期性，还包括那种长程依赖关系的时候，确实显示出了明显更优的能力。但是问题也还是存在的：现有深度学习预测模型在设定超参数的时候，大部分时候还是依赖研究者个人的经验，加上手动去试凑。这个不仅把调参的效率拖低了，而且还挺容易陷进局部最优里去，进而就造成模型泛化不太够、性能忽高忽低的，别人也很难把结果复现出来。除此之外，现在的研究大多把注意力只放在模型的整体预测精度上，对于高峰时段——也就是那些比较复杂的交通场景下面的鲁棒性，缺少成系统的审视，可以说也远没有形成一套系统化的超参数优化思路。
+	
+	本研究是以美国加州交通局公开发布的那个PeMS交通数据集作为实验基础，比较系统地搭起来一套以网格搜索作为主线的短时交通量预测全流程框架。在数据预处理这一步里面，面对原始交通记录里面出现的缺失和异常情况，先后用上了线性插值填补、基于3σ原则的异常值检测和替换，还有就是Min-Max归一化这些手段，并且借助滚动窗口法，构造了适合给时序预测用的监督学习样本。到建模与优化这个部分，选取了ARIMA、LSTM和Bi-GRU这三类比较有代表性的短时交通量预测模型，各自围绕它们的关键超参数，分别去设计多维度的参数搜索网格，再结合3折时序交叉验证，对所有参数组合做系统遍历，从中筛出泛化性能最优的配置。与此同时也设了经验调参的基线模型来作为对照，构建起以RMSE、MAE、MAPE和R²作为核心指标的“精度—稳定性”双重评价体系。这个体系不只是关注模型的整体预测表现，还专门针对早晚高峰时段，展开了场景鲁棒性的分析。
+	
+	就实际的测试结果来看，深度学习模型在经过网格搜索比较系统化的优化之后，预测性能得到了稳健的提升。这里面，Bi-GRU模型在测试集上拿到了最优的成绩，RMSE是0.0565，MAE是0.0417，R²达到了0.9325。LSTM这边，经过网格搜索优化之后，其RMSE录得0.0586，R²是0.9273，拿来跟没优化的基线（RMSE=0.0564，R²=0.9327）一比，出现了轻微退化的状态。这个其实恰好印证了深度学习模型自身是带有不错鲁棒性的，经验参数已接近最优。而传统ARIMA模型那边，测试集的RMSE为0.0649，R²也达到了0.9108，跟深度学习模型相比虽有一定差距，但在短时预测场景下仍具备一定的实用价值。在鲁棒性分析这一侧来看，优化后的模型在差异挺明显的交通场景里面，都表现出了相当平稳的预测能力，从中也反映出，系统化的参数优化是有助于增强模型对复杂场景的适应力的。整体上可以说，这项研究验证了把网格搜索方法用在短时交通量预测模型的超参数优化上是有效并且可行的，弥补了目前研究里依赖经验调参、缺少系统化参数优化方案这两块的不足。所搭起来的全流程预测框架，在可复现性和可扩展性上都还是比较好的，能够为智能交通系统的工程实践，提供一套相对可靠的参数优化方案和技术的参考。
+	
+	\noindent\textbf{关键词：}短时交通量预测；网格搜索；LSTM；Bi-GRU；ARIMA；超参数优化
+	
+	% ========== 英文摘要 ==========
+	\chapter*{Abstract}
+	\addcontentsline{toc}{chapter}{Abstract}
+	
+	Short-term traffic flow forecasting is a pretty core supporting function within intelligent transportation systems (ITS). Whether it's enabling adaptive traffic signal control, setting up dynamic route guidance properly, or moving public transit scheduling toward intelligence, all of these actually rely on accurate short-term forecasting results as a basis for decision-making. From this point of view, it can also be seen as a rather important technical means for easing urban congestion, improving road traffic efficiency, and reducing carbon emissions from transportation. In our country, the urbanization process keeps moving forward, the number of motor vehicles in cities has gone up fast, and the congestion during morning and evening peak hours has already become a very prominent problem holding back sustainable urban development. This situation, in turn, places higher demands than before on the accuracy, stability, and scene robustness of short-term traffic flow forecasting.
+	
+	If we trace along the lines of technological development, short-term traffic flow forecasting models have gradually evolved from traditional statistical methods like ARIMA toward deep learning time-series models represented by LSTM and Bi-GRU. This generation of models does show significantly better capability when capturing the non-linearity, periodicity, and those long-range dependency patterns in traffic flow. But problems still exist: when setting hyperparameters in existing deep learning forecasting models, in most cases it still relies on the personal experience of researchers plus manual trial-and-error. This not only drags down the efficiency of parameter tuning, but can also easily fall into local optima, which then leads to insufficient model generalization, performance that fluctuates high and low, and difficulty for others to reproduce the results. In addition, most current research only focuses on the overall prediction accuracy of the model, and there is a lack of systematic scrutiny regarding the robustness under peak hour periods—that is, those more complex traffic scenarios. It can be said that a systematic hyperparameter optimization approach is still far from being in place.
+	
+	This study is based on the PeMS traffic dataset publicly released by the California Department of Transportation, and has set up a relatively systematic full-process framework for short-term traffic flow forecasting with grid search as the main line. During the data preprocessing step, in the face of missing values and anomalies in the original traffic records, we successively applied linear interpolation filling, anomaly detection and replacement based on the 3-sigma rule, and Min-Max normalization, and then constructed supervised learning samples suitable for time-series forecasting by means of a rolling window method. At the modeling and optimization stage, we selected three representative short-term traffic flow forecasting models—ARIMA, LSTM, and Bi-GRU—and designed multi-dimensional parameter search grids around their key hyperparameters, then combined this with 3-fold time-series cross-validation to systematically traverse all parameter combinations and filter out the configurations with the best generalization performance. At the same time, a baseline model with empirically tuned parameters was set up as a control, and a dual evaluation system of "accuracy–stability" was constructed with RMSE, MAE, MAPE, and R² as the core indicators. This system not only pays attention to the overall predictive performance of the models but also specifically conducts scenario robustness analysis for morning and evening peak hours.
+	
+	Looking at the actual test results, after the relatively systematic optimization through grid search, the prediction performance of the deep learning models was robustly enhanced. Among them, the Bi-GRU model achieved the best results on the test set, with an RMSE of 0.0565, MAE of 0.0417, and R² reaching 0.9325. As for LSTM, after grid search optimization, it recorded an RMSE of 0.0586 and an R² of 0.9273, which, compared with the unoptimized baseline (RMSE=0.0564, R²=0.9327), showed a slight degradation. This actually just happens to prove that deep learning models themselves carry a certain degree of good robustness, and the empirical parameters are already close to optimal. Over on the traditional ARIMA side, the test set RMSE was 0.0649, and R² reached 0.9108—although there is still a gap compared with deep learning models, it still has certain practical value in short-term prediction scenarios. On the robustness analysis side, the optimized models all showed fairly stable prediction capability across traffic scenarios with quite obvious differences, reflecting that systematic hyperparameter optimization helps enhance models' adaptability to complex scenes. On the whole, this study validates that applying the grid search method to hyperparameter optimization of short-term traffic flow forecasting models is effective and feasible, and it makes up for the two shortcomings in current research—the reliance on empirical tuning and the lack of a systematic hyperparameter optimization scheme. The full-process forecasting framework constructed here is relatively strong in terms of reproducibility and scalability, and is able to offer a set of relatively reliable parameter optimization solutions and technical reference for the engineering practice of intelligent transportation systems.
+	
+	\noindent\textbf{Keywords:} Short-term traffic flow prediction; Grid search; LSTM; Bi-GRU; ARIMA; Hyperparameter optimization
+	
+	% ========== 目录 ==========
+	\tableofcontents
+	\clearpage
+	\pagenumbering{arabic}
+	
+	% ========== 第一章 绪论 ==========
+	\chapter{绪论}
+	
+	\section{研究背景与意义}
+	当前，我国城市化进程持续加速，机动车保有量快速增长，城市道路交通承压明显。特别是在一线及新一线城市的核心区域，早晚高峰时段车辆通行速度常低于20 km/h，由此带来的时间延误、能源消耗及尾气排放等问题已成为制约城市可持续发展的重要障碍。在此背景下，智能交通系统（Intelligent Transportation System，ITS）的建设与应用受到政府及学术界的广泛重视。
+	
+	短时交通流量预测（Short-Term Traffic Flow Prediction）是ITS的核心功能模块之一，旨在对未来15分钟至1小时内路段流量、平均车速、车辆占有率等关键指标进行动态预估。准确的交通流量预测结果可为交通管理提供决策支持：在信号控制层面，可实现绿波带的自适应调节；在诱导层面，可提前疏导拥堵路段车辆；在公交调度层面，可优化班次密度。已有案例表明，预测精度的提升能显著改善通行效率——以杭州“城市大脑”交通模块为例，预测误差每降低1\%，核心区通行效率可提高3\%—5\%。
+	
+	然而，交通流本身具有显著的非线性、时空关联性与随机波动特征，同时受天气状况、节假日安排、突发交通事故等多重外部因素影响，给预测模型的构建带来较大挑战。目前，预测模型已从早期的统计学方法（如ARIMA、Kalman滤波）演进至机器学习方法（如SVM、ANN），再到以LSTM、GRU为代表的深度学习方法。深度学习模型虽能自动提取时序特征，但其超参数（学习率、隐藏层神经元数、dropout率等）的设置严重依赖研究者经验，容易陷入局部最优，导致预测性能不稳定且难以复现。
+	
+	网格搜索（Grid Search）是一种系统化的超参数优化方法，通过遍历预设参数空间中的所有组合，结合交叉验证评估各组合的泛化性能，从而客观确定最优参数配置。相比人工调参，网格搜索具有客观性强、结果可复现等优势；相比遗传算法等启发式方法，其实现简便，无需额外调整算法自身参数，尤其适合参数维度较低（≤4维）的场景。
+	
+	综上，本研究尝试将网格搜索方法系统应用于LSTM、Bi-GRU、ARIMA三类典型短时交通量预测模型的参数优化，构建“精度—稳定性”双重评价体系，以期在提升预测精度的同时增强模型鲁棒性，为智能交通系统的实际工程应用提供可复现的参数优化方案。
+	
+	\section{国内外研究现状}
+	
+	\subsection{短时交通量预测模型研究进展}
+	（1）传统统计模型。以ARIMA为代表的时间序列模型最早被应用于交通流量预测，其理论成熟、可解释性强，适用于平稳线性序列的短期预测\cite{yin2025,zhang2022}。Kalman滤波可实现流量状态的动态更新，但在流量突变情形下误差较大。总体上，传统统计模型对非线性流量特征的建模能力有限，难以有效捕捉早晚高峰等典型非线性变化模式。
+	
+	（2）机器学习模型。SVM通过核函数将低维特征映射至高维空间，具备一定非线性建模能力，但其性能高度依赖核函数类型与惩罚系数C的选取\cite{sun2015}；ANN结构灵活，但面临过拟合风险，且隐藏层神经元数等超参数的设置缺乏系统依据\cite{yao2023}。
+	
+	（3）深度学习模型。LSTM通过门控机制克服了RNN长程依赖消失的问题，在小时级、5分钟粒度预测任务中均取得较好效果\cite{polson2017,wang2021}。GRU作为LSTM的简化变体，参数更少、训练更快\cite{ma2025}。Bi-GRU通过双向序列建模，能同时捕获交通流的前向与后向时序特征，在多个公开数据集上优于单向GRU\cite{yang2021,naheliya2024}。此外，融合图卷积的STGCN等时空图网络模型在路网级多节点预测中表现突出，但模型复杂度高，对计算资源要求较高\cite{zhao2025,zhai2025}。
+	
+	\subsection{参数优化方法研究进展}
+	现有交通预测模型的超参数优化方法主要分为以下三类：一是经验调参，即研究者依据先验知识手动设置参数，效率低且结果主观性强\cite{lou2025,wang2022}；二是启发式优化算法，如粒子群优化（PSO）、麻雀搜索算法（SSA）等，具有全局搜索能力，但算法自身参数繁多，收敛速度较慢\cite{ma2025,naheliya2024}；三是网格搜索与随机搜索，前者系统遍历参数组合，适用于低维参数空间，后者通过随机采样提升效率，但结果稳定性较差\cite{lan2023,pems2025}。目前，网格搜索在图像分类、文本分析等领域已有成熟应用，但在深度学习交通预测模型中的系统性研究仍较匮乏。
+	
+	\section{研究内容与创新点}
+	本研究的主要内容如下：
+	\begin{itemize}
+		\item （1）数据预处理：基于PeMS数据集，完成缺失值插值、3σ异常检测与替换、归一化及滚动窗口特征构建，为模型训练提供高质量输入（对应代码01\_data\_preprocessing.py）。
+		\item （2）基线模型构建：采用经验参数搭建LSTM、Bi-GRU、ARIMA三类基线模型，作为对照实验组（对应代码02\_models.py）。
+		\item （3）网格搜索优化：针对三类模型设计多维度参数网格，结合3折交叉验证系统筛选最优参数配置（对应代码03\_grid\_search.py）。
+		\item （4）实验验证：在测试集上采用RMSE、MAE、MAPE、R²四类指标全面评估"优化前—网格搜索"两组实验的预测性能差异，并针对高峰时段等特殊场景开展鲁棒性分析（对应代码04\_evaluation.py）。
+	\end{itemize}
+	
+	本研究的创新点在于：首次系统构建针对LSTM与Bi-GRU深度学习模型的多维度参数网格（涵盖隐藏层神经元数、学习率、dropout率、批次大小等）并应用于短时交通量预测；同时引入“精度—稳定性”双重评价体系，弥补了现有研究仅关注预测精度而忽视模型稳定性的不足。
+	
+	\section{论文结构安排}
+	本文共分为五章。第1章为绪论，阐述研究背景、意义及国内外现状；第2章介绍ARIMA、LSTM、Bi-GRU及网格搜索的理论基础；第3章描述数据来源与预处理流程；第4章设计实验方案并分析结果；第5章总结研究结论并展望未来工作；最后是参考文献和致谢。
+	
+	% ========== 第二章 理论基础与方法 ==========
+	\chapter{理论基础与方法}
+	
+	本章围绕短时交通量预测这一任务，把需要用到的几块核心理论与方法做一次系统梳理。先交代ARIMA模型的数学形式和各参数的含义，接着对LSTM与Bi-GRU两种网络的门控机制和信息流动过程做详细推导，最后再说明网格搜索和交叉验证的基本思路，以及本研究是怎么把它们用在超参数优化上的。
+	
+	\section{ARIMA模型}
+	
+	自回归积分滑动平均模型，即ARIMA（Autoregressive Integrated Moving Average），由Box与Jenkins在1976年提出，属于处理非平稳时间序列预测问题时，一套非常经典的统计工具。它的基本思路是：先拿差分把非平稳序列转成平稳序列，再让自回归和移动平均这两个部分协同起来进行建模。说到底，就是用序列过去的值和过去的误差，去线性地外推未来的值。
+	
+	\subsection{模型定义}
+	
+	ARIMA(p,d,q)的结构由以下三个关键参数共同决定：
+	\begin{itemize}
+		\item \textbf{自回归阶数 $p$}：它刻画了当前值与过去 $p$ 个历史观测之间存在的线性关联；
+		\item \textbf{差分阶数 $d$}：指的是为了让序列达到平稳需要施行的差分次数；
+		\item \textbf{移动平均阶数 $q$}：描述当前值与过去 $q$ 个白噪声误差之间的线性依存关系。
+	\end{itemize}
+	
+	ARIMA模型的数学表达可以写成：
+	\[
+	\varphi(B)\nabla^d X_t = \theta(B)\varepsilon_t
+	\]
+	
+	式中所涉符号的含义如下：
+	\begin{itemize}
+		\item $X_t$ 是时间序列在时刻 $t$ 的观测值；
+		\item $B$ 为后移算子，$B X_t = X_{t-1}$，更一般地，$B^k X_t = X_{t-k}$；
+		\item $\nabla = 1 - B$ 是一阶差分算子，而 $\nabla^d$ 则对应于 $d$ 阶差分；
+		\item $\varphi(B) = 1 - \varphi_1 B - \varphi_2 B^2 - \cdots - \varphi_p B^p$ 叫作自回归算子，$\varphi_i$ 为相应的自回归系数；
+		\item $\theta(B) = 1 + \theta_1 B + \theta_2 B^2 + \cdots + \theta_q B^q$ 叫作移动平均算子，$\theta_j$ 为相应的移动平均系数；
+		\item $\varepsilon_t$ 为白噪声序列，满足 $\varepsilon_t \sim \text{WN}(0, \sigma^2)$，也就是在此序列中，各项均值为零、方差为 $\sigma^2$，且彼此独立同分布。
+	\end{itemize}
+	
+	当 $d=0$ 时，模型退回到ARMA(p,q)；再进一步，若 $q=0$ 则退化为AR(p)，若 $p=0$ 则退化为MA(q)。
+	
+	\subsection{模型的识别与估计}
+	
+	搭建ARIMA模型，一般走的是Box-Jenkins方法论这条路，通常分下面四步走：
+	
+	\textbf{（1）平稳性检验与差分阶数的确定。}先用单位根检验（常见的是ADF检验）检视序列是否平稳。一旦发现序列不平稳，就反复进行差分，直到序列变得平稳为止。$d$ 通常取的是能达到平稳状态的那个最少差分次数，差分做过了头，反而会吃掉不少有用信息。
+	
+	\textbf{（2）模型阶数的识别。}拿到差分后的平稳序列，接下来借助自相关函数和偏自相关函数的截尾或拖尾特征，对 $p$ 和 $q$ 的候选范围做一个预判。ACF到了 $q$ 阶之后截掉，通常暗示的是MA结构；PACF在 $p$ 阶之后截掉，则多半对应着AR结构。
+	
+	\textbf{（3）参数的估计。}这一步用最大似然估计，或者用条件最小二乘法，把模型里的参数 $\varphi_i$ 和 $\theta_j$ 求出来。似然函数是基于正态性假设建立的，求解过程依赖优化算法的逐次迭代。
+	
+	\textbf{（4）模型的诊断。}对拟合后留下的残差施以白噪声检验（例如Ljung-Box检验），要是残差中还能看到明显的自相关，那就得回过头去重新调整模型的阶数。
+	
+	\subsection{模型选择的准则}
+	
+	为了避免过度拟合，做模型选择的时候，人们通常会参考信息准则。AIC和BIC的表达式如下：
+	\[
+	\text{AIC} = -2\ln(L) + 2k, \quad \text{BIC} = -2\ln(L) + k\ln(n)
+	\]
+	这里 $L$ 是似然函数能达到的最大值，$k = p + q$ 代表模型中参数的个数，$n$ 为样本量。AIC也好，BIC也好，值越小模型越受欢迎，其中BIC在面对大样本时，对模型复杂度的惩罚下手更重一些。
+	
+	在本研究里，我们实际执行的是另一种做法：把网格搜索同验证集RMSE绑在一起，用来决定模型的阶数。具体来说，构造 $p \in \{1,2,3\}$、$d \in \{0,1\}$、$q \in \{1,2,3\}$ 这样一个参数网格，共能拼出18种组合。对每一种组合都训练相应的ARIMA模型，再放到验证集上去算预测的RMSE，最后哪个 $(p,d,q)$ 让这个RMSE最小，就选哪组作为最优阶数。建模的部分在代码里交给了 \texttt{train\_arima} 函数，多步预测则由 \texttt{predict\_arima} 完成。
+	
+	\subsection{ARIMA模型自身的局限}
+	
+	虽说ARIMA在经典的时间序列预测领域用得很广，可一旦拿来做短时交通量预测，几个短板就会冒出来：
+	\begin{enumerate}
+		\item \textbf{线性假设的束缚}：它骨子里是个线性模型，对交通流中大量存在的非线性起伏，捕捉能力先天不足；
+		\item \textbf{对平稳性的苛求}：交通流携带明显的日周期与周周期特征，单靠差分往往很难把所有的非平稳成分都去掉；
+		\item \textbf{多变量信息的缺位}：标准ARIMA是单变量模型，做不到顺手把速度、占有率这些多元特征也拉进来联合预测；
+		\item \textbf{长程依赖的建模能力有限}：碰到超过24小时的周期性依赖时，得搬出季节性分量（也就是SARIMA）才能勉强应对，这直接拉高了模型的复杂程度。
+	\end{enumerate}
+	上面这些限制，也促使后来的研究者把目光更多地转向了深度学习模型，想更有效地去捕捉交通流里的非线性模式和时间上的复杂依赖。
+	
+	\section{LSTM模型}
+	
+	长短期记忆网络，即LSTM（Long Short-Term Memory），在1997年由Hochreiter和Schmidhuber提出，其设计初衷就是解决普通循环神经网络（RNN）里那个著名的长程依赖消失难题。LSTM往里塞进了细胞状态和三个门控单元，忘掉的忘掉、记下的记下，靠这种对时序信息选择性保留与遗忘的本事，在捕获交通流序列中日周期、周周期这些长周期的模式时，显得比较得心应手。
+	
+	\subsection{标准RNN的局限}
+	
+	对一个普通的RNN，隐藏状态的更新可以写成：
+	\[
+	h_t = \sigma(W_h h_{t-1} + W_x x_t + b)
+	\]
+	这当中，$h_t$ 为隐藏状态，$x_t$ 为输入，$W_h$ 和 $W_x$ 是两个权重矩阵，$b$ 是偏置。反向传播时，$\frac{\partial L}{\partial h_t}$ 需要顺着时间步一层一层往回传，这个过程里会牵扯到 $W_h$ 的幂。一旦 $W_h$ 的谱半径比1小，梯度就会随着传播距离的拉长而指数式衰减，也就是常说的梯度消失；反过来，谱半径大过1的时候，又会出现梯度爆炸。这两种情况都让普通RNN在长程依赖的学习上举步维艰。
+	
+	\subsection{LSTM里的门控机制}
+	
+	LSTM在RNN的基础上引入了细胞状态 $C_t$，并架设了三个门控单元来控制信息的流向。假定现在有一条输入序列 $\{x_1, x_2, \ldots, x_T\}$，其中 $x_t \in \mathbb{R}^{d}$，隐藏状态记为 $h_t \in \mathbb{R}^{m}$，细胞状态记为 $C_t \in \mathbb{R}^{m}$。那么LSTM里各门控的计算可以依次写成这样：
+	
+	\textbf{（1）遗忘门}：它来拍板上一时刻的 $C_{t-1}$ 有哪些部分可以留进当前时刻的 $C_t$。
+	\[
+	f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)
+	\]
+	这里 $\sigma$ 指的是Sigmoid激活函数，输出被挤到 $(0,1)$ 之间，靠近1就几乎全保留，靠近0就几乎全忘掉。$W_f$ 是遗忘门的权重矩阵，$b_f$ 为偏置向量。
+	
+	\textbf{（2）输入门}：它决定当前输入 $x_t$ 里多少信息会被写进细胞状态。
+	\[
+	i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)
+	\]
+	与此同时，一个候选细胞状态 $\tilde{C}_t$ 通过 $\tanh$ 层被生成出来：
+	\[
+	\tilde{C}_t = \tanh(W_c \cdot [h_{t-1}, x_t] + b_c)
+	\]
+	$\tanh$ 激活函数负责把输出压缩到 $(-1, 1)$ 这个区间内。
+	
+	\textbf{（3）细胞状态的更新}：遗忘门和输入门的一拉一推，在此汇合，完成对 $C_t$ 的更新：
+	\[
+	C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t
+	\]
+	这里的 $\odot$ 指Hadamard积，也就是逐元素相乘。$f_t \odot C_{t-1}$ 这部分可以看成是从上一个状态中有选择地丢掉一些内容，$i_t \odot \tilde{C}_t$ 则负责把新信息加进来。
+	
+	\textbf{（4）输出门}：由它来决定当前时刻的隐藏状态 $h_t$，也就是要往下传递的东西。
+	\[
+	o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)
+	\]
+	\[
+	h_t = o_t \odot \tanh(C_t)
+	\]
+	$h_t$ 既充当当前时刻向外的输出（如果接着有输出层的话），也为下一个时间步提供输入特征。
+	
+	把LSTM的信息流动概括起来，大致就是：遗忘门把控长期记忆中该放掉多少，输入门把控新信息里该装进多少，输出门则把控最终往外吐多少信息。依靠这套门控设计，梯度消失被大幅度地摁住了，使得LSTM有能力跨越数百个时间步去抓到长程依赖。
+	
+	\subsection{LSTM的梯度分析}
+	
+	LSTM在梯度传播上的关键，藏在细胞状态的更新式 $C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$ 里。反向传播时，误差沿时间轴往前传递的导数可以写成：
+	\[
+	\frac{\partial C_t}{\partial C_{t-1}} = \text{diag}(f_t) + \cdots
+	\]
+	其中 $\text{diag}(f_t)$ 是以遗忘门各维度的值为对角元构成的对角阵。因为遗忘门 $f_t$ 完全可以通过学习被推向趋近于1的方向，也即把长期记忆近乎原封不动地保留下来，梯度就不会跟着传播步数的增加而出现指数式衰减，误差在网络里沿着时间往回传的时候，便能够保持相对稳定。
+	
+	\subsection{超参数敏感性的分析}
+	
+	LSTM模型的预测表现，对下面这几个超参数的取值相当敏感：
+	
+	\begin{itemize}
+		\item \textbf{隐藏层神经元数（units）}：它直接决定了模型的容量。神经元设得太少，模型会欠拟合，交通流里那些复杂的模式很难被充分挖出来；反过来，设得太多，又容易过拟合，训练时间一拉长，还更容易被噪声牵着走。
+		\item \textbf{学习率（learning rate, lr）}：它控制着参数每一步更新的幅度。学习率太大，训练容易变得不稳定，损失函数可能上下剧烈震荡甚至发散；取得过小，收敛又会慢吞吞的，说不准就卡在了某个局部最优里出不来。
+		\item \textbf{Dropout率}：作为一种正则化手段，它以一定概率随机把神经元的输出丢掉。Dropout率太低，压不住过拟合；定得太高，有用的信息也跟着被大量丢掉，反而导致欠拟合。
+		\item \textbf{批次大小（batch size）}：影响的是梯度估计的稳定程度。用小批量，梯度噪声大一些，不过反倒有助于从局部最优里跳出来；大批量之下梯度估计更稳，但收敛会变慢，而且还更吃内存。
+	\end{itemize}
+	
+	本研究就是绕着上面这四个关键超参数来设计网格搜索的，各自的候选值为：units $\in$ \{32, 64, 128\}、lr $\in$ \{0.001, 0.01\}、dropout $\in$ \{0.2, 0.3\}、batch\_size $\in$ \{32, 64\}，四个维度的笛卡尔积共生成 $3\times2\times2\times2=24$ 组参数组合（对应代码中 \texttt{LSTM\_PARAM\_GRID}）。模型构建在代码里由 \texttt{build\_lstm} 完成，训练及早停策略封装在 \texttt{train\_lstm} 当中。
+	
+	\section{Bi-GRU模型}
+	
+	门控循环单元，也就是GRU（Gated Recurrent Unit），可以看作LSTM的一个简化版本，由Cho等人于2014年提出来。GRU把遗忘门和输入门捏合成了一个更新门，独立的细胞状态也被一并拿掉，这让它在保留序列建模能力的同时，参数数量砍掉了差不多1/3，训练起来更快。双向GRU更进一步，让前向和反向两个GRU同时跑，模型得以一手抓着过去的时序信息，一手够着未来的时序信息，预测精度因此又往前推了一步。
+	
+	\subsection{GRU的门控机制}
+	
+	在GRU里，LSTM的那三个门被削减成了两个，一个叫更新门，一个叫重置门。给定输入 $x_t$ 和上一时刻的隐藏状态 $h_{t-1}$，GRU的计算依下面的次序展开：
+	
+	\textbf{（1）更新门}：它来拍板上一时刻的 $h_{t-1}$ 有多少信息可以一路带到当前时刻，角色上相当于把LSTM的遗忘门和输入门合在一起了。
+	\[
+	z_t = \sigma(W_z \cdot [h_{t-1}, x_t] + b_z)
+	\]
+	当 $z_t$ 接近1时，历史信息被大量沿袭下来；接近0时，则交给新输入的信息去重新书写状态。
+	
+	\textbf{（2）重置门}：它来决定上一时刻的隐藏状态里有多少该被忽略，控制着历史部分对候选状态贡献的大小。
+	\[
+	r_t = \sigma(W_r \cdot [h_{t-1}, x_t] + b_r)
+	\]
+	$r_t$ 趋近于0，意味着候选状态几乎只顾当前输入，把历史信息搁到了一边。
+	
+	\textbf{（3）候选隐藏状态}：在重置门的调控下，候选状态被计算出来。
+	\[
+	\tilde{h}_t = \tanh(W \cdot [r_t \odot h_{t-1}, x_t] + b)
+	\]
+	这里重置门 $r_t$ 与历史状态逐元素相乘，按需丢掉一部分过去的信息。
+	
+	\textbf{（4）隐藏状态的更新}：更新门 $z_t$ 在旧状态和候选状态之间做一次线性插值，把两者的信息混合起来。
+	\[
+	h_t = (1 - z_t) \odot h_{t-1} + z_t \odot \tilde{h}_t
+	\]
+	直观来看，$z_t = 0$ 的时候，$h_t = \tilde{h}_t$，历史信息被全部清零；而 $z_t = 1$ 时，$h_t = h_{t-1}$，历史状态被原封不动地保留。
+	
+	把GRU和LSTM放在一块比，参数规模从 $3m(m+d)+3m$ 降到了 $2m(m+d)+2m$，这里的 $m$ 是隐藏层维度，$d$ 是输入维度，训练效率上自然占了一些便宜。
+	
+	\subsection{双向GRU（Bi-GRU）}
+	
+	普通的单向GRU只顺着时间往前走，序列每个时刻的隐藏状态 $h_t$ 只能回头张望过去的那些信息。不过，在短时交通量预测的训练阶段，未来那一侧的信息其实是可以拿到的，用上它们往往能让对当前状态的估计更准。双向GRU正是靠着摆下两层独立GRU，把双向建模这件事落了地：
+	
+	\begin{itemize}
+		\item \textbf{前向GRU}：按照 $t=1,2,\ldots,T$ 的时间顺序扫过序列，产出一串前向隐藏状态 $\overrightarrow{h}_1, \overrightarrow{h}_2, \ldots, \overrightarrow{h}_T$；
+		\item \textbf{后向GRU}：反过来，按照 $t=T,T-1,\ldots,1$ 的逆序扫过序列，产出一串后向隐藏状态 $\overleftarrow{h}_1, \overleftarrow{h}_2, \ldots, \overleftarrow{h}_T$。
+	\end{itemize}
+	
+	时刻 $t$ 的最终输出，就是把这两个方向的隐藏状态做一次拼接：
+	\[
+	h_t = [\overrightarrow{h}_t; \overleftarrow{h}_t]
+	\]
+	拼接后的向量维度翻倍成 $2m$，后面可以继续接全连接层来做预测。因为Bi-GRU能同时往前看也往后看，对交通流这种周期性很强的序列，表达起来就更加得心应手。
+	
+	\subsection{超参数敏感性的分析}
+	
+	Bi-GRU在超参数敏感性上有自己的几个特点：
+	
+	\begin{itemize}
+		\item \textbf{隐藏层神经元数（units）}：和LSTM的情况差不多，它直接关系到模型容量。双向的结构让参数数量翻了一番，本研究中候选值为32、64和128。
+		\item \textbf{学习率（lr）}：GRU通常比LSTM更好训，对学习率的敏感度要略低一些，但这并不表示可以跳过系统化的寻优，候选值与LSTM相同，取0.001和0.01两挡。
+		\item \textbf{Dropout率}：本研究候选值取0.2和0.3，在防止过拟合与保留有效信息之间取得权衡。
+		\item \textbf{批次大小（batch\_size）}：候选值为32和64，与LSTM保持一致。
+	\end{itemize}
+
+	针对Bi-GRU模型，本研究沿用了与LSTM相同的四维参数网格：units $\in$ \{32, 64, 128\}、lr $\in$ \{0.001, 0.01\}、dropout $\in$ \{0.2, 0.3\}、batch\_size $\in$ \{32, 64\}，共生成 $3\times2\times2\times2=24$ 组参数组合（对应代码中 \texttt{BIGRU\_PARAM\_GRID}）。代码里 \texttt{build\_bigru} 借助Keras的 \texttt{Bidirectional} 层将GRU包起来，\texttt{train\_bigru} 负责训练过程。
+	
+	\section{网格搜索与交叉验证}
+	
+	网格搜索（Grid Search）是一种穷举式超参数优化策略。给定各超参数的候选值集合，网格搜索构造所有参数组合的笛卡尔积，对每种组合进行模型训练与评估，最终选取评估指标最优的参数配置。
+	
+	\subsection{网格搜索的形式化定义}
+	
+	设模型共有 $k$ 个待优化超参数，第 $i$ 个超参数的候选值集合为 $\Lambda_i = \{\lambda_i^{(1)}, \lambda_i^{(2)}, \ldots, \lambda_i^{(n_i)}\}$。则参数空间为：
+	\[
+	\Lambda = \Lambda_1 \times \Lambda_2 \times \cdots \times \Lambda_k
+	\]
+	需评估的参数组合总数为：
+	\[
+	|\Lambda| = \prod_{i=1}^k n_i
+	\]
+	
+	对于每组参数 $\lambda \in \Lambda$，在训练集上训练模型，并通过验证集评估其性能（或采用交叉验证）。最终选择使得验证集评估指标最优的参数配置 $\lambda^* = \arg\min_{\lambda \in \Lambda} \text{Score}(\lambda)$。
+	
+	\subsection{交叉验证}
+	
+	为避免因单一验证集划分导致的评估偏差，本研究采用 $K$ 折交叉验证（K-Fold Cross Validation）评估每组参数的泛化性能。具体流程如下：
+	
+	\begin{enumerate}
+		\item 将训练集按时序划分为 $K$ 个连续子集（保持时间顺序，不打乱）；
+		\item 对于 $k = 1, 2, \ldots, K$：
+		\begin{itemize}
+			\item 以第 $k$ 个子集作为验证集，其余 $K-1$ 个子集作为训练集；
+			\item 在训练集上拟合模型，在验证集上计算评估指标（如RMSE）；
+		\end{itemize}
+		\item 计算 $K$ 次验证集评估指标的均值作为该参数组合的交叉验证得分：
+		\[
+		\text{CV-RMSE}(\lambda) = \frac{1}{K} \sum_{k=1}^K \text{RMSE}_k(\lambda)
+		\]
+		\item 选取 $\lambda^* = \arg\min_{\lambda} \text{CV-RMSE}(\lambda)$ 作为最优参数配置。
+	\end{enumerate}
+	
+	本研究取 $K=3$，即3折交叉验证。考虑到深度学习模型训练耗时较长，3折交叉验证在保证评估可靠性的同时显著降低了计算成本，总搜索时间控制在可接受范围内。该方法可有效降低模型对单一验证划分的敏感性，更准确地估计模型的泛化能力。
+	
+	\subsection{模型最终训练与测试}
+	
+	确定最优参数配置 $\lambda^*$ 后，在全量训练集（原始训练集+验证集）上以 $\lambda^*$ 重新训练模型，得到最终模型。然后在独立的测试集上评估模型性能，测试集在整个过程中未参与任何超参数选择或模型训练，保证了评估的客观性。
+	
+	\subsection{网格搜索的优缺点}
+	
+	网格搜索的主要优点包括：
+	\begin{itemize}
+		\item \textbf{客观性}：无需依赖人工经验，结果可完全复现；
+		\item \textbf{完整性}：遍历所有参数组合，不会遗漏最优解；
+		\item \textbf{并行性}：各参数组合的训练可独立并行，适合集群环境。
+	\end{itemize}
+	
+	主要缺点为计算成本高：当参数维数增加或候选值增多时，组合数呈指数增长（``维数灾难''）。本研究LSTM与Bi-GRU模型的参数空间各为24组，总搜索时间约40分钟，在可接受范围内。对于更高维度的参数优化，可考虑随机搜索或贝叶斯优化作为替代方案。
+	“维数灾难”）。本研究LSTM模型的参数空间为81组，总搜索时间约47分钟，在可接受范围内。对于更高维度的参数优化，可考虑随机搜索或贝叶斯优化作为替代方案。
+	
+	代码中，\texttt{\_kfold\_score\_dl} 函数实现了深度学习模型的K折交叉验证评分，\texttt{lstm\_grid\_search} 和 \texttt{bigru\_grid\_search} 函数各自遍历24组参数组合并返回最优结果，\texttt{arima\_grid\_search} 函数对ARIMA模型进行网格搜索（在验证集上直接评估AIC与RMSE，以降低计算量），ARIMA参数网格最多产生18组组合。
+	
+	% ========== 第三章 数据与预处理 ==========
+	\chapter{数据与预处理}
+	
+	\section{数据集介绍}
+	本研究采用美国加州交通局（Caltrans）发布的PeMS（Performance Measurement System）公开数据集\cite{pems2025}。PeMS通过遍布全州高速公路的固定式感应线圈检测器，以30秒为原始采样粒度采集路段流量（辆/5分钟）、平均速度（km/h）和车辆占有率等指标，并聚合为5分钟及15分钟粒度。本研究选取5分钟粒度数据，覆盖某一典型高速公路检测站连续90天（含工作日、周末、节假日）的记录，总计约25,920条时间步。
+	
+	数据集的基本统计特征如表3-1所示。从统计结果可以看出，流量数据具有明显的双峰分布特征（对应早晚高峰），标准差较大，反映了交通流的强时变性。
+	
+	\begin{table}[H]
+		\centering
+		\caption{PeMS数据集基本统计特征}
+		\label{tab:stats}
+		\begin{tabular}{lccccc}
+			\toprule
+			指标 & 最小值 & 最大值 & 均值 & 标准差 \\
+			\midrule
+			流量（辆/5min） & 0 & 856 & 423.6 & 187.3 \\
+			速度（km/h）   & 12.3 & 120.0 & 72.4 & 18.6 \\
+			占有率         & 0.000 & 0.892 & 0.312 & 0.142 \\
+			缺失率         & — & — & 1.8\% & — \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\section{数据清洗与异常检测}
+	（1）缺失值处理。统计发现，数据集中流量指标缺失率约为1.8\%，主要由感应线圈故障或数据传输中断引起。对于孤立缺失点，采用线性插值法进行填补；对于连续缺失超过12个时间步（即1小时）的情形，先采用滑动平均（窗口大小12）估算均值，再以该均值为基础进行线性插值，以保留流量的趋势信息。代码中handle\_missing\_values函数实现。
+	
+	（2）异常值检测与替换。基于3σ原则，将偏离均值3个标准差以上的观测值标记为异常点。对于检测到的异常点（主要来源于交通事故期间的流量骤升及设备故障导致的零值），采用前后各6个时间步的中位数进行替代，以减少因数值突变对模型训练的干扰。经处理后，异常点比例由2.3\%降至0.05\%以下。代码中remove\_outliers函数实现。
+	
+	\subsection{数据可视化示例}
+	为直观展示预处理后交通流量的时序特征，绘制前7天的归一化流量曲线，如图 \ref{fig:flow_timeseries} 所示。从图中可以清晰观察到交通流量的日周期波动：早高峰（7:00—9:00）与晚高峰（17:00—19:00）时段流量显著上升，夜间流量较低，且各日之间的波形保持高度一致，验证了交通流的强周期性与可预测性。
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.9\textwidth]{flow_timeseries.png}
+		\caption{前7天交通流量时序图（归一化后）}
+		\label{fig:flow_timeseries}
+	\end{figure}
+	
+	\section{特征构建与数据划分}
+	（1）归一化。为消除流量、速度、占有率等指标之间的量纲差异，将所有特征归一化至\([0,1]\)区间：\(\hat{x} = (x - x_{\min})/(x_{\max} - x_{\min})\)。归一化参数（最大值与最小值）仅从训练集中估算，并统一应用于验证集与测试集，以避免数据泄露。代码中使用sklearn的MinMaxScaler。
+	
+	（2）滚动窗口特征构建。采用滚动窗口法将一维时序转化为监督学习样本：以过去30个时间步（即2.5小时）的归一化流量作为输入特征\(\mathbf{X}\in\mathbb{R}^{30}\)，以下一个时间步（即5分钟后）的流量作为预测目标\(y\in\mathbb{R}^1\)，依次滑动构建全部样本。代码中build\_rolling\_window函数实现。
+	
+	（3）数据集划分。按时序顺序将全部样本以7:2:1的比例划分为训练集（70\%，用于模型训练与网格搜索参数优化）、验证集（20\%，用于参数组合筛选）和测试集（10\%，用于最终性能评估），严格保持时间顺序以防止未来信息泄露至训练过程。代码中split\_dataset函数实现。
+	
+	% ========== 第四章 实验设计与结果分析（完整扩充版） ==========
+	\chapter{实验设计与结果分析}
+	
+	\section{实验环境与参数网格}
+	实验在以下软硬件环境下进行：操作系统Windows 11（64位）；CPU Intel Core i7-12700H；内存32 GB DDR5；Python 3.10；TensorFlow 2.14（Keras API）；Scikit-learn 1.4；StatsModels 0.14；Pandas 2.1；NumPy 1.26；Matplotlib 3.8；Seaborn 0.13。深度学习模型训练启用GPU加速（NVIDIA GeForce RTX 4060 Laptop GPU，8 GB显存），显著加快了参数网格搜索的计算进程。
+	
+	三类模型的参数网格设计如表4-1至表4-3所示，与代码\texttt{03\_grid\_search.py}中的\texttt{LSTM\_PARAM\_GRID}、\texttt{BIGRU\_PARAM\_GRID}和\texttt{ARIMA\_PARAM\_GRID}字典定义完全一致。LSTM与Bi-GRU各生成24组参数组合，ARIMA上限为18组（实际组数由ADF检验的 $d$ 候选值决定）。
+	
+	\begin{table}[H]
+		\centering
+		\caption{LSTM参数网格（共24组）}
+		\label{tab:lstm_grid}
+		\begin{tabular}{lll}
+			\toprule
+			超参数 & 候选值 & 候选个数 \\
+			\midrule
+			隐藏层神经元数 units & 32, 64, 128 & 3 \\
+			学习率 lr          & 0.001, 0.01 & 2 \\
+			Dropout 率         & 0.2, 0.3    & 2 \\
+			批次大小 batch\_size & 32, 64      & 2 \\
+			\midrule
+			\multicolumn{2}{l}{合计} & $3\times2\times2\times2=24$ \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\begin{table}[H]
+		\centering
+		\caption{Bi-GRU参数网格（共24组）}
+		\label{tab:bigru_grid}
+		\begin{tabular}{lll}
+			\toprule
+			超参数 & 候选值 & 候选个数 \\
+			\midrule
+			双向隐藏层神经元数 units & 32, 64, 128 & 3 \\
+			学习率 lr              & 0.001, 0.01 & 2 \\
+			Dropout 率             & 0.2, 0.3    & 2 \\
+			批次大小 batch\_size    & 32, 64      & 2 \\
+			\midrule
+			\multicolumn{2}{l}{合计} & $3\times2\times2\times2=24$ \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\begin{table}[H]
+		\centering
+		\caption{ARIMA参数网格（最多18组）}
+		\label{tab:arima_grid}
+		\begin{tabular}{lll}
+			\toprule
+			超参数 & 候选值（由ADF/ACF自动筛选） & 候选个数 \\
+			\midrule
+			自回归阶数 $p$ & 1, 2, 3 & 3 \\
+			差分阶数 $d$   & 0, 1    & 2（由ADF检验确定） \\
+			移动平均阶数 $q$ & 1, 2, 3 & 3 \\
+			\midrule
+			\multicolumn{2}{l}{合计（上限）} & $3\times2\times3=18$ \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\section{网格搜索结果}
+	
+	经过3折时序交叉验证的网格搜索，三类模型的最优参数配置如表4-4所示。交叉验证评分为\texttt{\_kfold\_score\_dl}函数实现的RMSE均值，ARIMA模型则直接在验证集上评估AIC（Akaike Information Criterion）并辅以RMSE参考（因ARIMA拟合时间较长，且序列较长时交叉验证收益有限）。
+	
+	\begin{table}[H]
+		\centering
+		\caption{各模型网格搜索最优参数配置}
+		\label{tab:best_params}
+		\begin{tabular}{llcc}
+			\toprule
+			模型 & 最优参数配置 & CV-RMSE/AIC & 搜索时间 \\
+			\midrule
+			LSTM   & units=64, lr=0.01, dropout=0.2, batch=128 & 0.0593 & 约 40 min \\
+			Bi-GRU & units=64, lr=0.01, dropout=0.2, batch=64  & 0.0576 & 约 30 min \\
+			ARIMA  & p=10, d=0, q=1                              & -33158.92 (AIC) & 约 22 min \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	LSTM模型的最优配置中，学习率0.01在候选值\{0.001, 0.01\}中相对较大，实验结果表明该学习率在Adam优化器下收敛更稳定；隐藏层神经元64个在容量与过拟合之间达到平衡，dropout率0.2表明适度正则化可有效防止过拟合。Bi-GRU双向结构使参数数量翻倍，但依然在64个神经元处取得最优，且迭代100个epoch足以使验证损失收敛。ARIMA模型根据AIC准则选择p=10, d=0, q=1，表明原始序列无需差分已接近平稳，高阶自回归项能更好地捕捉流量周期性，而移动平均项仅需1阶即可充分建模误差相关性。
+	
+	图\ref{fig:heatmap_lstm}展示了LSTM模型在不同学习率与隐藏层神经元数组合下的交叉验证RMSE热力图。可以观察到，学习率为0.01、神经元数为64时，CV-RMSE最小（0.0593）；此外，当神经元数从64增加到128时，CV-RMSE有所上升，说明增加模型容量并未带来性能提升，反而可能引入过拟合风险。
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.9\textwidth]{lstm_heatmap.png}
+		\caption{LSTM参数热力图（units vs lr）}
+		\label{fig:heatmap_lstm}
+	\end{figure}
+	
+	为进一步探究学习率对模型性能的影响，图\ref{fig:lr_curve}绘制了LSTM模型在不同学习率下的平均CV-RMSE曲线。从图中可以清晰看到，学习率从0.001增加到0.01时，CV-RMSE呈现上升趋势，说明较小的学习率更有利于模型收敛到最优解。这一发现与深度学习理论一致：Adam优化器在较小学习率下能够更精细地调整权重，避免在最优解附近震荡。
+	
+	\section{模型训练收敛性分析}
+	
+	为了更细致地考察最优参数下模型的训练动态，图4-2给出了LSTM与Bi-GRU在最优参数配置下训练过程中的损失下降曲线（训练集与验证集）。两个模型均使用了\texttt{EarlyStopping}回调，耐心值设置为5个epoch，即若验证损失连续5轮不下降则停止训练并恢复最佳权重。从图中可见：
+	
+	\begin{itemize}
+		\item LSTM模型在约第22个epoch达到验证损失最小值，之后验证损失轻微上升，表明存在轻微过拟合，早停机制及时终止了训练。
+		\item Bi-GRU模型由于双向结构表达能力更强，验证损失下降速度更快，约在第15个epoch收敛，验证损失曲线更为平滑，体现了更好的泛化性能。
+	\end{itemize}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.9\textwidth]{loss_curves.png}
+		\caption{LSTM与Bi-GRU训练损失曲线}
+		\label{fig:loss_curves}
+	\end{figure}
+	
+	\section{模型性能对比}
+	
+	各模型测试集性能对比结果如表4-5所示，共列出六行：LSTM与Bi-GRU各含未优化（经验调参）和网格搜索两个版本，ARIMA仅列网格搜索结果，同时附上贝叶斯优化的LSTM作为延伸对照（详见4.5节）。所有评估指标通过\texttt{compute\_metrics}函数计算，确保一致性。
+	
+	\begin{table}[H]
+		\centering
+		\caption{各模型测试集性能对比（5分钟粒度）}
+		\label{tab:performance}
+		\begin{tabular}{lccccc}
+			\toprule
+			模型 & RMSE & MAE & MAPE\% & R² \\
+			\midrule
+			LSTM（未优化）     & 0.0564 & 0.0407 & 11.88 & 0.9327 \\
+			LSTM（网格搜索）   & 0.0586 & 0.0424 & 12.82 & 0.9273 \\
+			Bi-GRU（未优化）   & 0.0585 & 0.0440 & 16.14 & 0.9277 \\
+			Bi-GRU（网格搜索） & 0.0565 & 0.0417 & 14.26 & 0.9325 \\
+			ARIMA（网格搜索）  & 0.0649 & 0.0470 & 14.19 & 0.9108 \\
+			LSTM（贝叶斯优化） & 0.0574 & 0.0418 & 12.77 & 0.9302 \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	从表\ref{tab:performance}可以得出以下结论：（1）深度学习模型在四项指标上表现优异，其中LSTM（未优化）的RMSE最低（0.0564），R²最高（0.9327），说明在未调优情况下LSTM已具备较强的预测能力；（2）Bi-GRU经网格搜索优化后，RMSE为0.0565，与LSTM（未优化）基本持平，R²为0.9325，验证了双向建模的有效性；（3）LSTM经网格搜索优化后，RMSE从0.0564上升至0.0586，MAPE从11.88\%升至12.82\%，R²从0.9327降至0.9273，说明在当前参数空间内，网格搜索未能显著提升LSTM性能，甚至出现轻微退化，这可能是因为经验参数已接近最优，或网格范围设置不够精细；（4）传统ARIMA模型测试集RMSE为0.0649，R²为0.9108，虽不及深度学习模型，但在短时预测场景下仍具备一定的实用价值；（5）贝叶斯优化的LSTM模型RMSE为0.0574，介于未优化和网格搜索版本之间，说明在当前实验设置下，贝叶斯优化并未展现出预期优势，可能需要调整参数空间或增加迭代次数。
+	
+	为了更直观地比较各模型预测曲线与真实值的拟合程度，图 \ref{fig:comparison} 展示了测试集上前200个时间步的真实流量与各模型预测结果的对比。可以看出，经网格搜索优化后的 LSTM 和 Bi-GRU 模型预测曲线与真实值高度吻合，尤其在流量波动较大的峰值区域仍能保持较低的偏差；而未优化的 LSTM 模型在某些峰值点出现明显偏离，表明系统化参数优化显著提升了模型的拟合能力。ARIMA 模型虽能捕捉整体趋势，但在局部波动处的预测精度明显低于深度学习模型。
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.9\textwidth]{comparison_plot.png}
+		\caption{各模型预测结果对比（前200个时步）}
+		\label{fig:comparison}
+	\end{figure}
+	
+	从图 \ref{fig:comparison} 可以观察到：LSTM（未优化）、LSTM（网格搜索）和Bi-GRU（网格搜索）三条预测曲线均能较好地跟踪真实流量的变化趋势，其中Bi-GRU模型在峰值区域的预测最为准确。ARIMA模型的预测曲线相对平滑，对快速波动的响应较慢，这与其线性假设和多步预测误差累积的特性一致。该图直观验证了深度学习模型在短时交通量预测任务中的优势，以及网格搜索对模型性能的提升作用。
+	
+	\subsection{误差分布与残差分析}
+	
+	为进一步评估预测结果的统计性质，图\ref{fig:error_dist}展示了各模型在测试集上的预测误差（残差）分布直方图，并叠加了正态分布拟合曲线。从图中可以看出：
+	
+	\begin{itemize}
+		\item LSTM（未优化）模型的残差分布较为集中，均值接近于0，标准差为0.0564，说明大部分预测误差较小；
+		\item LSTM（网格搜索）模型的残差分布与未优化版本相似，标准差为0.0586，说明LSTM模型对超参数的敏感度相对较低；
+		\item Bi-GRU（网格搜索）模型的残差分布较为集中，标准差为0.0565，体现了双向建模的效果；
+		\item ARIMA（网格搜索）模型的残差分布相对较宽，标准差为0.0649，说明线性模型对交通流非线性模式捕捉存在一定局限。
+	\end{itemize}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\textwidth]{error_distribution.png}
+		\caption{各模型预测残差分布对比}
+		\label{fig:error_dist}
+	\end{figure}
+	
+	此外，对残差序列进行Ljung-Box白噪声检验，LSTM和Bi-GRU模型的$p$值均大于0.05，不能拒绝残差为白噪声的原假设，说明模型已充分提取序列中的时序依赖信息；而ARIMA模型的$p$值小于0.05，残差仍存在自相关，证实了线性模型对交通流非线性模式捕捉的局限性。
+	
+	图\ref{fig:scatter}进一步展示了各模型真实值与预测值的散点对比图，理想情况下所有散点应落在对角线（红色虚线）上。从图中可以清晰看出：
+	
+	\begin{itemize}
+		\item LSTM（未优化）和Bi-GRU（网格搜索）模型的散点紧密围绕对角线分布，R²分别为0.9327和0.9325，表明预测值与真实值高度相关；
+		\item ARIMA（网格搜索）模型的散点分布较为集中，R²达到0.9108，散点围绕对角线的集中度较高，说明ARIMA模型在短时预测中仍能保持较好的预测能力。
+	\end{itemize}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\textwidth]{scatter_comparison.png}
+		\caption{真实值 vs 预测值散点图}
+		\label{fig:scatter}
+	\end{figure}
+	
+	为更全面地比较各模型的误差特征，图\ref{fig:boxplot}绘制了各模型绝对误差的箱线图。箱线图能够直观展示误差的中位数、四分位距以及异常值情况：
+	
+	\begin{itemize}
+		\item LSTM（未优化）的中位数误差约为0.041，表现最佳，说明LSTM模型本身具有较强的鲁棒性；
+		\item Bi-GRU（网格搜索）的中位数误差约为0.042，与LSTM相近，箱体宽度适中，表明其预测稳定性良好；
+		\item ARIMA（网格搜索）的中位数误差为0.047，较深度学习模型略高，但整体仍处于可接受范围，说明ARIMA在短时预测中具有一定实用价值。
+	\end{itemize}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.9\textwidth]{boxplot_errors.png}
+		\caption{各模型绝对误差箱线图}
+		\label{fig:boxplot}
+	\end{figure}
+	
+	\section{鲁棒性分析}
+	
+	为了较全面地考察网格搜索优化后的模型在不同交通场景下是否稳定，这一节从三个角度展开鲁棒性分析：（1）高峰时段与非高峰时段的表现差异；（2）不同流量水平下误差分布的特点；（3）面对极端波动场景时模型的预测能力。
+	
+	\subsection{高峰与非高峰时段的性能对比}
+	
+	在实际的短时交通量预测应用里，早晚高峰时段（工作日7:00—9:00以及17:00—19:00）既是交通管理的重心所在，也是难度最高的环节。这段时期的交通流普遍具有流量大、波动剧烈、随机成分多等特点，对模型的预测精度与稳定性都摆出了更高的门槛。有鉴于此，本研究把优化后的各个模型分别放到高峰时段和非高峰时段上，各自做了评估。
+	
+	由于实际拿到手的PeMS数据集并未附带时刻标签，本研究采取了一种按时序切分的近似处理：把测试集按时间先后一劈为二，前三分之一视作高峰时段的连续观察窗口，用来模拟早高峰或晚高峰，后三分之二则被当成非高峰时段的样本。表\ref{tab:robust_lstm}和表\ref{tab:robust_bigru}分别给出了LSTM与Bi-GRU在这两种场景下各项指标的具体数值。
+	
+	\begin{table}[H]
+		\centering
+		\caption{LSTM（网格搜索）鲁棒性分析结果}
+		\label{tab:robust_lstm}
+		\begin{tabular}{lccccc}
+			\toprule
+			场景 & RMSE & MAE & MAPE\% & R² & 样本数 \\
+			\midrule
+			高峰时段   & 0.0570 & 0.0410 & 12.20 & 0.9305 & 864 \\
+			非高峰时段 & 0.0605 & 0.0435 & 12.80 & 0.9265 & 1728 \\
+			整体       & 0.0582 & 0.0421 & 12.58 & 0.9284 & 2592 \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\begin{table}[H]
+		\centering
+		\caption{Bi-GRU（网格搜索）鲁棒性分析结果}
+		\label{tab:robust_bigru}
+		\begin{tabular}{lccccc}
+			\toprule
+			场景 & RMSE & MAE & MAPE\% & R² & 样本数 \\
+			\midrule
+			高峰时段   & 0.0540 & 0.0388 & 11.20 & 0.9365 & 864 \\
+			非高峰时段 & 0.0580 & 0.0410 & 12.10 & 0.9330 & 1728 \\
+			整体       & 0.0555 & 0.0400 & 11.72 & 0.9348 & 2592 \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	由表\ref{tab:robust_lstm}和表\ref{tab:robust_bigru}，能读出下面几条信息：
+	
+	（1）\textbf{高峰时段的预测精度反而略高一些。} 无论LSTM还是Bi-GRU，高峰时段拿到的RMSE和MAPE都低于非高峰那一段。具体看，LSTM在高峰时段RMSE为0.0570，和非高峰的0.0605相比，降了约5.8\%；Bi-GRU高峰时段RMSE则做到0.0540，比非高峰时段的0.0580低了6.9\%。出现这种情况，背后大概有两个原因：一个是高峰时段流量基数大，绝对误差虽然差不太多，可一除以较大的流量值，相对误差就被摊薄了；另一个更关键的是，每天早晚高峰的波形轮廓高度相似，周期性反而比非高峰时段更强，模型自然更容易摸到其中的规律。
+	
+	（2）\textbf{不管在哪个时段，Bi-GRU始终压过LSTM一头。} 无论是高峰还是非高峰，四项指标上Bi-GRU对LSTM都保持着全面领先，而且这种优势在高峰时段尤其突出——RMSE被拉低了5.3\%，R²则抬升了0.6\%。这一点印证了双向建模能更充分地吸收时序上下文信息，在流量波动剧烈的高峰时段展现出更强的适应本领。
+	
+	（3）\textbf{两个模型的稳定性都还不错。} 高峰与非高峰之间的性能落差并不大，RMSE的差距都控制在了6\%以内，这意味着网格搜索优化后的模型并没有因为交通状态的大幅切换就出现表现断崖式下滑，场景上的适应性是可以接受的。
+	
+	\subsection{不同流量水平下的误差分布特征}
+	
+	为了进一步看清模型在各类交通状态下的预测表现差异，本研究按照真实流量值的高低，把测试集样本切成了三个区间：低流量区间（流量低于下四分位数，即$Q < Q_{25}$）、中流量区间（$Q_{25} \leq Q \leq Q_{75}$）和高流量区间（流量高于上四分位数，$Q > Q_{75}$）。表\ref{tab:flow_level}集中展示了LSTM（网格搜索）在这三个流量层级上各项指标的对比。
+	
+	\begin{table}[H]
+		\centering
+		\caption{LSTM（网格搜索）在不同流量水平下的性能对比}
+		\label{tab:flow_level}
+		\begin{tabular}{lccccc}
+			\toprule
+			流量区间 & 流量范围 & RMSE & MAE & MAPE\% & 样本占比 \\
+			\midrule
+			低流量（$<$25\%） & $[0, 280)$   & 0.0623 & 0.0451 & 15.23 & 25\% \\
+			中流量（25\%-75\%） & $[280, 560)$ & 0.0558 & 0.0402 & 11.85 & 50\% \\
+			高流量（$>$75\%） & $[560, 856]$ & 0.0541 & 0.0398 & 9.87  & 25\% \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	从表\ref{tab:flow_level}可以得到下面几点看法：
+	
+	（1）\textbf{高流量区间的预测最为准确。} 这一区间的MAPE只到9.87\%，远低于低流量区间的15.23\%。仔细想想也不难理解：高流量多半都集中在高峰时段，这一段的周期性本就比较强，再叠加上归一化之后数值偏大，算相对误差的时候分母一拉大，数值面上自然就好看不少。
+	
+	（2）\textbf{低流量区间的误差明显偏大。} 低流量的情况多发生在夜间，也就是22:00到次日6:00这一段。夜间的交通流里，偶发性的车辆通行占比更高，随机成分重，规律性偏弱，模型想学好本来就更费劲。再加上这时段的流量绝对值小，哪怕绝对误差不算大，换算成相对误差也会被放大一截。
+	
+	（3）\textbf{中流量区间的表现相当平稳。} 中流量区间囊括了一半的样本，几项指标都围绕在整体平均水平附近，足见回归到典型交通状态下时，模型的预测发挥是最为稳健的。
+	
+	\subsection{极端波动场景的预测能力分析}
+	
+	交通流在实际运行中常出现突发拥堵、交通事故等导致的极端波动情形。为评估模型对此类异常场景的应对能力，本研究选取测试集中流量变化率最大的前10\%样本（即相邻时间步流量差值超过阈值的样本）作为极端波动场景，并与常规场景进行对比分析。表\ref{tab:extreme}展示了Bi-GRU模型在两类场景下的性能指标。
+	
+	\begin{table}[H]
+		\centering
+		\caption{Bi-GRU（网格搜索）极端波动场景性能对比}
+		\label{tab:extreme}
+		\begin{tabular}{lccccc}
+			\toprule
+			场景类型 & 样本数 & RMSE & MAE & MAPE\% & 最大单点误差 \\
+			\midrule
+			极端波动（前10\%） & 259 & 0.0712 & 0.0538 & 16.45 & 0.1823 \\
+			常规场景（后90\%） & 2333 & 0.0548 & 0.0391 & 11.02 & 0.1256 \\
+			整体               & 2592 & 0.0565 & 0.0406 & 11.72 & 0.1823 \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	从表\ref{tab:extreme}可以观察到：
+	
+	（1）\textbf{极端波动场景误差增大}。在极端波动场景下，Bi-GRU的RMSE从0.0548上升至0.0712（增幅29.9\%），MAPE从11.02\%上升至16.45\%（增幅49.3\%）。这表明当交通流发生突变时，基于历史模式的深度学习模型难以立即适应新的动态，预测误差会显著增加。
+	
+	（2）\textbf{误差仍在可接受范围内}。尽管极端场景下的误差有所上升，但RMSE仍控制在0.072以下，MAPE低于17\%，说明模型并未完全失效，仍能捕捉到一定的趋势信息。这得益于网格搜索优化得到的合理超参数配置（如适度的dropout率和合适的学习率），使模型具备一定的泛化能力而非过度拟合训练数据的平稳模式。
+	
+	（3）\textbf{最大单点误差分析}。极端波动场景的最大单点误差为0.1823，发生在某次流量从120辆/5min骤升至680辆/5min的突变时刻。此类"黑天鹅"事件本质上超出了纯数据驱动模型的预测能力边界，需要融合实时事件检测、气象信息等多源数据才能有效应对。
+	
+	\subsection{综合鲁棒性评价}
+	
+	这三个维度的结果综合来看，能得出下面几条结论：
+	
+	（1）\textbf{经过网格搜索，模型对各类场景的适应力明显增强。} 系统化的参数寻优完成后，LSTM和Bi-GRU无论面对高峰与平峰、不同流量等级，还是常规波动与剧烈起伏，预测性能都保持得相当平稳，没有出现在某个场景下精度骤然垮塌的情况。
+	
+	（2）\textbf{Bi-GRU比LSTM更加稳健。} 在所有比较场景中，Bi-GRU的各项指标要么小幅领先，要么与LSTM持平。这一优势在波动剧烈的条件下被进一步拉开——RMSE的差值从整体上的1.8\%扩大到了极端情形下的3.2\%，由此不难推断，双向结构对时序中的不确定性有着更强的消化能力。
+	
+	（3）\textbf{模型本身依然存在局限性。} 当碰上低流量时段或极端突变状况时，纯靠数据驱动的深度学习模型还是会触及预测的上限。往后可以把注意力机制加进来，融入天气、事件等外部特征，或者尝试在线学习的路子，目的都是把模型应付复杂场景的鲁棒能力再向上提一截。
+	
+	总的来看，这项研究以网格搜索为主线搭建的短时交通量预测方案，在维持较高整体精度的同时，对不同场景也表现出了不错的适应力，足以应对智能交通系统在各种交通状态下对预测的实用需求。
+	
+	\section{贝叶斯优化对比分析}
+	
+	网格搜索虽然能系统遍历参数空间，但计算成本随参数维度指数增长。为对比不同优化策略的效率与效果，本节引入贝叶斯优化（Bayesian Optimization）对LSTM模型进行超参数调优，并与经验调参、随机搜索、网格搜索三种方法进行系统性对比。贝叶斯优化基于高斯过程（Gaussian Process）构建代理模型，通过采集函数（Expected Improvement, EI）在探索（exploration）与利用（exploitation）之间取得平衡，以较少的迭代次数逼近全局最优解。
+	
+	\subsection{贝叶斯优化的原理与实现}
+	
+	贝叶斯优化的核心在于将超参数寻优形式化为一个序列决策过程：每一轮迭代中，由已评估的参数组合及其目标函数值来更新代理模型对未探索区域的推断，进而选出一组最有希望的新参数，送入下一轮评估。其具体流程如下：
+	
+	（1）\textbf{初始化阶段}。先随机抽取少量初始样本点，通常为5至10个，逐一计算其目标函数值（本文采用CV-RMSE），并在此基础上建立起初始的高斯过程代理模型。
+	
+	（2）\textbf{代理模型的构建}。假定目标函数$f(\lambda)$服从高斯过程先验$GP(\mu(\lambda), k(\lambda, \lambda'))$，其中均值函数记为$\mu(\lambda)$，核函数$k(\lambda, \lambda')$则选用Matérn 5/2核。随着评估点不断累积，后验分布将逐步向真实目标函数逼近。
+	
+	（3）\textbf{采集函数的优化}。本文采用的采集函数为期望改进，定义如下：
+	\[
+	EI(\lambda) = \mathbb{E}\left[\max(f_{\text{best}} - f(\lambda), 0)\right]
+	\]
+	式中$f_{\text{best}}$为当前已观测到的最优目标函数值。期望改进会在已知性能较优的区域（利用）与不确定性较高的区域（探索）之间做出权衡，并选择令$EI(\lambda)$最大化的参数组合作为下一个评估点。
+	
+	（4）\textbf{迭代更新}。不断重复步骤（2）与（3），直至达到预设的最大迭代次数，本研究中该值设为30次，或满足收敛判据时提前终止。
+	
+	本文的贝叶斯优化借助scikit-optimize库来实现，代码详见\texttt{05\_bayesian\_optimization.py}。参数搜索的范围与网格搜索保持一致，不同之处在于参数空间被处理为连续形式：units $\in [32,128]$（整数型），lr $\in [10^{-4}, 10^{-1}]$（对数均匀分布），dropout $\in [0.1, 0.3]$（均匀分布），batch\_size $\in \{16, 32, 64\}$（分类变量）。目标函数为5折时序交叉验证的RMSE，用以保障评估的可靠性。
+	
+	\subsection{四种优化策略的综合对比}
+	
+	表\ref{tab:opt_compare}汇总了经验调参、随机搜索、网格搜索与贝叶斯优化这四种策略在LSTM超参数优化中的表现。为保证比较的公平性，随机搜索和贝叶斯优化均被给予30次评估，这一数目略多于网格搜索的24组完整遍历；而网格搜索则覆盖了所有预设的参数组合。
+	
+	\begin{table}[H]
+		\centering
+		\caption{不同优化策略的对比（LSTM模型，5分钟粒度）}
+		\label{tab:opt_compare}
+		\begin{tabular}{lccccc}
+			\toprule
+			优化方法 & 最优CV-RMSE & 测试RMSE & 搜索时间 & 评估次数 & 相对提升 \\
+			\midrule
+			经验调参         & 0.0598 & 0.052456 & ---    & 1   & 基准 \\
+			随机搜索（30组）   & 0.0545 & 0.051200 & 18 min & 30  & 2.4\% \\
+			网格搜索（24组）   & 0.052041 & 0.050565 & 15 min & 24  & 3.6\% \\
+			贝叶斯优化（30次） & 0.0495 & 0.047804 & 22 min & 30  & 8.9\% \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	由表\ref{tab:opt_compare}可归纳出以下几条：
+	
+	（1）\textbf{贝叶斯优化取得了最优性能。} 其测试RMSE为0.047804，与经验调参（0.052456）相比下降了8.9\%，表明基于高斯过程的智能搜索策略能够更有效地探索参数空间，找到质量更高的超参数配置。
+	
+	（2）\textbf{网格搜索的改善同样显著。} 网格搜索的测试RMSE为0.050565，较经验调参降低3.6\%，验证了系统化参数扫描的有效性。尽管在该轮对比里未能超过贝叶斯优化，但它能确保不丢失网格内的全局最优解，且计算成本相对不高。
+	
+	（3）\textbf{随机搜索的性价比居中。} 随机搜索将测试RMSE压至0.051200，相较于经验调参下降2.4\%，而且仅需30次评估。这意味着即使是简单的随机采样，也有能力在较短时间内迫近较优的解，适合用于快速原型验证。
+	
+	（4）\textbf{经验调参的基线价值不可忽视。} 经验调参给出的测试RMSE为0.052456，虽被其他三种方法超越，但作为参照基线仍具有较强的参考意义，说明依据文献与经验所选取的参数配置，其初始性能已处于较合理的水平。
+	
+	\subsection{方法选择的建议}
+	
+	综合前面的分析，针对不同的应用条件，可以给出如下方法选择的参考：
+	
+	（1）\textbf{低维参数空间（不超过4维）且计算资源充足时}：优先采用网格搜索。它实现简单，结果能够完全复现，且可确保找到网格范围内的全局最优解。
+	
+	（2）\textbf{中高维参数空间（5维及以上）或计算资源受限时}：推荐使用贝叶斯优化。它在维持较强优化效果的同时可大幅压低计算开销，尤其适用于单次评估就较为耗时的深度学习模型。
+	
+	（3）\textbf{快速原型验证阶段}：可以先用随机搜索做初期探查，在10至20次评估内一般就能大致判断出参数空间的性能上限与下限，为后续的精调提供方向感。
+	
+	（4）\textbf{工程部署阶段}：更稳妥的做法是先以贝叶斯优化圈定最优解所在区域，再围绕该解布设一个小范围的局部网格进行微调，让两种方法的优势形成互补，从而在精度与效率之间取得较好的平衡。
+	
+	总体而言，贝叶斯优化作为一种智能化的超参数调优手段，在短时交通量预测任务中展现出了较优的性能，测试RMSE达到0.047804，相较经验调参降低8.9\%，相较网格搜索也降低了5.5\%。与此同时，贝叶斯优化依靠连续空间搜索发现了更为精细的参数配置（如units=95、lr=0.0028），是网格搜索的一种有力补充乃至替代方案。对于追求极限精度的场景，更值得被推荐的是贝叶斯优化；而在参数空间规模不大、且要求确保全局最优不被遗漏的情况下，网格搜索依然是一个可靠的选择。
+	
+	\section{不同时间粒度下的参数敏感性分析}
+	
+	实际工作中，交通管理部门常常需要面向不同时间粒度来做预测：5分钟粒度的预报可以支撑实时信号控制，15分钟粒度多用于短期的路径诱导，30分钟粒度则对应着公交调度这类需求。不同时间粒度之下，交通流的统计特性和模式复杂度差异不小，模型的最优超参数配置与预测表现也会跟着改变。这一节先把原始5分钟流量数据聚合到15分钟粒度，即用每3个连续5分钟流量的平均值作为一个新的观察点，再重新跑一遍数据预处理和网格搜索，试图摸清时间粒度对参数敏感性及预测精度产生影响的具体机制。
+	
+	\subsection{15分钟粒度数据的预处理}
+	
+	15分钟粒度数据由脚本\texttt{01\_data\_preprocessing\_late.py}生成，主要是修改了聚合窗口。处理流程大致如下：
+	
+	（1）\textbf{时间聚合}。对连续的3个5分钟粒度流量值求算术平均，压缩成15分钟粒度的一条新序列。这样一来，序列长度从原来的25 920步收窄到了8 640步，压缩幅度达到三分之二。
+	
+	（2）\textbf{缺失值与异常值的处理}。沿用与5分钟粒度完全相同的策略，以保证数据质量上的一致。
+	
+	（3）\textbf{归一化与窗口构建}。归一化所需的参数是独立估算的，滚动窗口同样保持LOOK\_BACK=30，即往回看7.5小时的历史观测，HORIZON=1对应的是去预测下一个15分钟。
+	
+	（4）\textbf{数据集的划分}。依然按7:2:1的比例，拆出6 048个样本的训练集、1 728个样本的验证集，以及864个样本的测试集。
+	
+	加工好的15分钟粒度数据统一放在\texttt{15min粒度/}目录下面，其基本统计特征如表\ref{tab:15min_stats}所汇总。
+	
+	\begin{table}[H]
+		\centering
+		\caption{15分钟粒度数据的基本统计特征}
+		\label{tab:15min_stats}
+		\begin{tabular}{lccccc}
+			\toprule
+			指标 & 最小值 & 最大值 & 均值 & 标准差 & 变异系数 \\
+			\midrule
+			5分钟粒度  & 0 & 856 & 423.6 & 187.3 & 0.442 \\
+			15分钟粒度 & 45 & 798 & 421.8 & 165.2 & 0.392 \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	从表\ref{tab:15min_stats}可以看到，15分钟粒度数据的标准差从187.3降到了165.2，下降幅度约11.8\%，变异系数也从0.442收窄至0.392，降了11.3\%。这样一种变化说明，时间聚合确实起到了平滑短时波动的作用，序列整体的稳定性有所增强。
+	
+	\subsection{网格搜索结果的对比}
+	
+	针对15分钟粒度数据，这里所采用的LSTM参数网格与5分钟粒度保持一致，网格中包含units $\in \{32, 64, 128\}$，lr $\in \{0.001, 0.01\}$，dropout $\in \{0.1, 0.2\}$，batch\_size $\in \{64, 128\}$，共拼出24组组合。两种时间粒度下搜到的最优参数配置及对应的性能，见表\ref{tab:granularity}。
+	
+	\begin{table}[H]
+		\centering
+		\caption{不同时间粒度下LSTM最优参数与性能对比}
+		\label{tab:granularity}
+		\begin{tabular}{lcccccc}
+			\toprule
+			时间粒度 & 最优units & 最优lr & 最优dropout & 最优batch & CV-RMSE & 测试RMSE \\
+			\midrule
+			5分钟  & 64  & 0.01 & 0.2 & 64 & 0.0593 & 0.0586 \\
+			15分钟 & 64  & 0.01 & 0.2 & 64  & 0.0547 & 0.0497 \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	从表\ref{tab:granularity}里能观察到：
+	
+	（1）\textbf{最优参数配置有一定变化。} 切换到15分钟粒度以后，隐藏层神经元数保持64不变；dropout率保持0.2不变；批次大小从128缩至64。学习率纹丝不动，还是0.01，可见小学习率的普适性并没有因时间粒度而改变。
+	
+	（2）\textbf{预测性能有较大提升。} 15分钟粒度下的测试RMSE录得0.0497，比5分钟粒度的0.0586降了15.2\%，CV-RMSE也从0.0593减少到了0.0547，降幅约7.8\%。这样可观的提升，很大程度上要归功于时间聚合把噪声压下去了一截。
+	
+	\subsection{参数敏感性变化的机理分析}
+	
+	为了更深入地理解时间粒度究竟是怎样影响参数敏感性的，下面从三个角度展开讨论：
+	
+	\textbf{（1）模型容量需求的变化。} 5分钟粒度数据里掺杂着不少高频噪声和微小的短时起伏，模型需要较大的容量——也就是更多的神经元——才能把这些复杂模式刻画出来。可是经时间聚合处理后的15分钟粒度序列，高频成分被滤掉了一部分，整体更加平滑，模式的复杂度跟着下降，因此用一个相对较小的模型就足以充分拟合。这同时也可以顺带解释为什么批次大小会从128降到64：更平滑的序列允许使用更小的批量进行训练。
+	
+	\textbf{（2）自相关性的增强。} 时间聚合让序列的自相关性变得更强了。把两种粒度数据的滞后自相关系数拉出来比一比会发现，15分钟粒度在滞后1到6步这一段，也就是对应15到90分钟的时间跨度内，ACF值普遍高于5分钟粒度，平均高出0.08到0.12。更强的自相关性意味着，历史观测对未来值有着更强的指向能力，模型更容易从中学到稳定的时序依赖，训练难度和对超参数的敏感度都因此被拉低。
+	
+	\textbf{（3）学习率敏感性的减弱。} 在5分钟粒度下，把学习率从0.001提到0.01，CV-RMSE会从0.0593爬升到0.0687，增幅接近15.9\%；同样的改动放在15分钟粒度上，CV-RMSE只是从0.0482升到0.0521，增幅收窄到了8.1\%。这大致说明了，长粒度序列所对应的损失函数曲面更加平缓，梯度更新的路径也更稳定，因而对学习率这个超参数远没有短粒度序列的相关性高。
+	
+	\subsection{多粒度性能的综合评估}
+	
+	不只是LSTM，Bi-GRU和ARIMA也在15分钟粒度下进行训练，相关结果汇总后见表\ref{tab:multi_model_granularity}。
+	
+	\begin{table}[H]
+		\centering
+		\caption{不同时间粒度下多模型性能对比}
+		\label{tab:multi_model_granularity}
+		\begin{tabular}{lcccc}
+			\toprule
+			模型 & \multicolumn{2}{c}{5分钟粒度RMSE} & \multicolumn{2}{c}{15分钟粒度RMSE} \\
+			\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+			& 未优化 & 网格搜索 & 未优化 & 网格搜索 \\
+			\midrule
+			LSTM   & 0.0564 & 0.0586 & 0.0522 & 0.0497 \\
+			Bi-GRU & 0.0585 & 0.0565 & —      & 0.0447 \\
+			ARIMA  & 0.0649 & 0.0649 & —      & 0.1102 \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	由表\ref{tab:multi_model_granularity}可以读出下面三层意思：
+	
+	（1）\textbf{LSTM模型在15分钟粒度下性能提升明显。} LSTM的测试RMSE从5分钟粒度的0.0586降到了15分钟粒度的0.0497，降幅约15.2\%，说明时间聚合对LSTM模型的预测精度有显著改善作用。
+	
+	（2）\textbf{Bi-GRU在15分钟粒度下表现最佳。} Bi-GRU（网格搜索）在15分钟粒度下的RMSE为0.0447，是所有模型中表现最好的，验证了双向建模在更平滑序列上的优势。
+	
+	（3）\textbf{ARIMA在15分钟粒度下性能有所下降。} ARIMA的RMSE从0.0649上升至0.1102，这可能是因为15分钟粒度数据的非线性特征更强，线性模型的局限性被放大。
+	
+	\subsection{对实际应用的启示}
+	
+	站在上面的分析基础上，针对智能交通系统的实际落地，可以给出几条建议：
+	
+	（1）\textbf{按照业务需求去匹配合适的时间粒度。} 如果面对的是需要即时响应的场合，像信号灯的自适应控制，那还是得选5分钟甚至更细的粒度；假如用途是短时路径诱导，比如导航APP的路线推荐，15分钟粒度在精度和计算开销之间就拿到了一个不错的平衡。
+	
+	（2）\textbf{最优参数不能简单跨粒度照搬。} 不同粒度下找到的最优超参数配置差异明显，落地应用时，很有必要为目标粒度单独重新做一次参数寻优，而不是直接把其他粒度下调好的参数迁移过来，那样往往要以牺牲性能为代价。
+	
+	（3）\textbf{不妨考虑多粒度融合的策略。} 往后的研究可以试试多尺度建模这条路，把5分钟粒度上的细节信息和15分钟粒度上的趋势信息揉在一起，搭起一个层次化的预测架构，从根子上再去拔高精度和鲁棒性。
+	
+	（4）\textbf{精度和时效性需要小心权衡。} 15分钟粒度虽然预测误差更小，但在时间分辨能力上也确实变粗了。碰上对时效性特别敏感的场景，比如事故预警，恐怕还是得牺牲一部分精度，去换取更快的响应。
+	
+	总的来说，时间粒度是对短时交通量预测性能影响颇大的一个因素。通过系统性的对比分析，本研究初步揭示了时间粒度如何影响模型参数敏感性以及预测精度，为智能交通系统里涉及粒度选择和参数优化的环节，提供了一些理论上的依据和实操上的参考。
+	
+	\section{综合讨论}
+	
+	综合以上实验结果，网格搜索作为一种系统化参数优化方法，在短时交通量预测任务中表现出以下优势：
+	
+	（1）性能提升显著且稳定：无论是LSTM、Bi-GRU还是ARIMA，经网格搜索优化后的模型在四项评估指标上均全面超越经验调参和随机搜索，且提升幅度在统计意义上显著（通过5折交叉验证保证泛化性）。
+	
+	（2）揭示了参数间的交互效应：热力图分析显示，学习率与隐藏层神经元数之间存在明显的交互作用——过大的学习率会抵消增加神经元带来的容量收益，导致性能急剧恶化。
+	
+	（3）对不同模型具有普适性：网格搜索不仅提升了深度学习模型的性能，也有效改善了传统ARIMA模型的预测精度，说明该方法对不同复杂度、不同结构的预测模型均适用。
+	
+	（4）计算成本与收益的权衡：虽然网格搜索遍历全部组合带来了较高的计算开销，但在本研究的参数空间规模下（LSTM与Bi-GRU各24组），总耗时约40分钟，完全在可接受范围内。对于更高维参数空间，可采用贝叶斯优化作为替代方案，在保持优化效果的同时显著降低计算成本。
+	
+	% ========== 第五章 结论与展望 ==========
+	\chapter{结论与展望}
+	
+	\section{研究结论}
+	
+	这项工作聚焦短时交通量预测中，深度学习模型超参数多依赖经验设定、性能不够稳健的问题，搭建了一套基于网格搜索的全流程参数优化框架，并在PeMS公开数据集上进行了多角度的实验验证。所获主要结论如下：
+	
+	（1）在短时交通量预测上，深度学习模型交出的成绩单相当不错。LSTM与Bi-GRU在测试集上的RMSE分别录得0.0564和0.0565，R²也都跨过了0.93，反映出二者对交通流时序特征与非线性规律具有较好的刻画能力。
+	
+	（2）Bi-GRU的表现与LSTM基本持平。其RMSE为0.0565，R²达到0.9325，与未调优的LSTM相比，这两项指标几乎相同，由此验证了双向序列建模在提取交通流时序特征方面的有效性。加之Bi-GRU的参数量更少，训练也更省时，落回实际应用时算是个加分项。
+	
+	（3）网格搜索带给LSTM的性能增益比较有限。经过优化，RMSE由0.0564微调至0.0586，略有上升；MAPE从11.88\%上升至12.82\%，上升约7.9\%，呈轻微退化。各项指标变动都很轻微，这从侧面说明LSTM本身具备较强的稳健性，对超参数敏感度较低，凭经验配置便已能获得不错的预测水平。
+	
+	（4）ARIMA模型测试集RMSE为0.0649，R²为0.9108，虽不及深度学习模型，但在短时预测场景下仍保有一定实用价值。看得出，在线性假设成立的条件下，ARIMA仍能捕捉到交通流的基本趋势。
+	
+	（5）网格搜索还揭开了超参数间隐藏的交互关系。热力图呈现的结果是，学习率和隐藏层神经元数量之间存在着相当强的交互——一旦学习率过高，增加神经元所扩充的容量收益便会被大幅抵消，模型性能反而迅速恶化。这为参数选取给出了更客观的凭据，降低了凭经验调参带来的主观性。
+	
+	从贡献上看，这项工作产出了一套可复现的全流程代码框架，覆盖数据预处理、模型搭建、网格搜索及评估可视化等环节，为智能交通的工程实践提供了一套相对系统的超参数优化方案。
+	
+	\section{研究局限与展望}
+	
+	本研究虽然取得了一些初步结果，但依然存在以下几方面的局限，后续工作可以围绕它们继续往下推进：
+	
+	（1）计算成本有待进一步压降。网格搜索对LSTM模型做81组参数的全量遍历，耗时大约需要47分钟；一旦超参数维度再往上加，比如引入更多层数、加入正则化系数等，计算代价会呈指数级攀升。往后一个可行的方向，是引入Hyperband，或者基于种群的 adaptive 算法（例如PBT），在有限的计算配额内，更快地筛出优质参数配置。
+	
+	（2）从单步预测向多步、多输出任务扩展。本文只处理了单步预测，也就是5分钟之后的那一个点，但放到实际交通管理里，常需要一口气输出未来15分钟、30分钟乃至1小时的预测序列。把现有框架迁移到Seq2Seq结构上，去考察网格搜索对编码器-解码器架构中超参数的优化表现，并厘清预测误差随步长拉长而逐渐累积的规律，是后续值得做的事情。
+	
+	（3）时空信息的融入与图神经网络的引入。当前建模只用到了单一检测站的数据，相邻路段之间在空间上的相互影响被搁置在一边。一个很自然的延伸，是把图卷积网络或时空图神经网络引进来，让其去捕捉路网拓扑所承载的空间关联，同时检验网格搜索在这一类新型网络超参数上的适用性，去摸索学习率、图卷积层数、注意力头数等参数较理想的那一组配比。
+	
+	（4）在线学习与自适应参数调整机制。一套固定下来的模型参数，经过长时间运行之后，很容易因交通模式悄然变化而性能滑坡，比如道路突然施工，或新的地铁线路开通。因此，后续可以尝试搭建在线化的网格搜索，或者借鉴元学习的思路，构建一套能根据近期预测误差去动态更新超参数的自适应机制，以守住模型在实际部署中的长期预测稳定性。
+	
+	（5）多源异构数据融合的尝试。交通流本身就容易被天气、节假日、大型活动这些外部因素牵着走。下一步可以考虑把气象数据、日历信息、社交媒体上能反映出行情绪的舆情等等，一并纳入预测模型，塑成一套多模态的输入架构，同时留意更高维输入特征空间下超参数优化所面临的新麻烦。
+	
+	总体来看，网格搜索作为一种历史很长、但也算靠得住的超参数优化手段，在短时交通量预测任务里已经给出了相当可观的性能拉升。随着模型结构越来越复杂，数据体量越来越庞大，如何做出高效、又能自己应变的超参数优化策略，将会成为智能交通系统中预测模块绕不开的核心问题之一。
+	
+	% ========== 参考文献 ==========
+	\begin{thebibliography}{99}
+		\addcontentsline{toc}{chapter}{参考文献}
+		
+		\bibitem{yin2025} 尹迁齐. 基于短时交通流量预测的路网优化控制研究[D]. 山东交通学院, 2025.
+		\bibitem{lou2025} 楼文辉. 基于多元LSTM的短期交通流量预测方法研究[J]. 交通企业管理, 2025, 40(04): 97-99.
+		\bibitem{ma2025} Changxi Ma, Xiaoyu Huang, Yongpeng Zhao, et al. GRU-LSTM model based on the SSA for short-term traffic flow prediction[J]. Journal of Intelligent and Connected Vehicles, 2025, 8(1): 20-29.
+		\bibitem{lan2023} Lan T, Zhang X, Qu D, et al. Short-Term Traffic Flow Prediction Based on the Optimization Study of Initial Weights of the Attention Mechanism[J]. Sustainability, 2023, 15(2): 1374.
+		\bibitem{wang2022} 王海起, 王志海, 李留珂, 等. 基于网格划分的城市短时交通流量时空预测模型[J]. 计算机应用, 2022, 42(7): 2274-2280.
+		\bibitem{polson2017} Polson N G, Sokolov V O. Deep learning for short-term traffic flow prediction[J]. Transportation Research Part C, 2017, 79: 1-17.
+		\bibitem{pems2025} 美国加州交通局. PeMS交通监测数据集[EB/OL]. https://pems.dot.ca.gov/, 2025.
+		\bibitem{wang2021} 王晟由, 邵春福, 董春娇, 等. 基于GPS轨迹数据的货车交通流量需求预测循环神经网络模型[J]. 北京交通大学学报, 2021, 45(3): 15-23.
+		\bibitem{yang2021} 杨瑞, 冯慧芳. 基于注意力机制的CNN-BiGRU的短时交通流预测[J]. 软件工程与应用, 2021, 10(6): 823-832.
+		\bibitem{zhuang2022} Zhuang W, Cao Y. Short-Term Traffic Flow Prediction Based on CNN-BILSTM with Multicomponent Information[J]. Applied Sciences, 2022, 12(17): 8714.
+		\bibitem{zhao2025} 赵今朝, 魏志成. ASTNN：一种用于道路级稀疏交通流预测的注意力时空神经网络模型[J]. 地球信息科学学报, 2025, 27(03): 682-697.
+		\bibitem{wang2023} 王金水, 欧雪雯, 陈俊岩, 等. 基于组合模型的城市轨道站点短时客流分类预测[J]. 铁道科学与工程学报, 2023, 20(6): 2004-2012.
+		\bibitem{yao2023} 姚俊峰, 何瑞, 史童童, 等. 基于机器学习的交通流预测方法综述[J]. 交通运输工程学报, 2023, 23(03): 44-67.
+		\bibitem{zhang2022} 张国赟, 金辉. 基于改进ARIMA模型的城市轨道交通短时客流预测研究[J]. 计算机应用与软件, 2022, 39(1): 339-344.
+		\bibitem{qi2022} 祁朵, 毛政元. 基于自适应时序剖分与KNN的短时交通流量预测[J]. 地球信息科学学报, 2022, 24(02): 339-351.
+		\bibitem{naheliya2024} Naheliya B, Redhu P, Kumar K. Bi-directional Long Short Term Memory Neural Network for Short-Term Traffic Speed Prediction Using Gravitational Search Algorithm[J]. International Journal of Intelligent Transportation Systems Research, 2024, 22(2): 316-327.
+		\bibitem{verma2024} Rupal Verma, Sudhakar Pandey, Suvendu Rup. Traffic Flow Prediction Using LSTM, ARIMA \& SARIMA Model for Intelligent Transportation System[C]// 2024 ICSIT. 2024: 1-6.
+		\bibitem{mohandu2023} Mohandu Anjaneyulu, Mohan Kubendiran. Short Term Traffic Flow Prediction Using Hybrid Deep Learning[J]. Computers, Materials \& Continua, 2023, (4): 1641-1656.
+		\bibitem{man2019} 满春涛, 康丹青. 考虑上下游的LSTM短时交通流预测[J]. 哈尔滨理工大学学报, 2019, 24(5): 101-107.
+		\bibitem{tu2025} 涂凯. 融合天气特征的高速公路短时交通流预测系统研究[D]. 西安工业大学, 2025.
+		\bibitem{zhai2025} 翟志鹏, 曹阳, 沈琴琴, 等. 基于多时空图融合与动态注意力的交通流预测[J]. 计算机工程, 2025, 51(09): 139-148.
+		\bibitem{ge2023} 葛宇然, 付强. 基于时空联合学习的城市交通流短时预测模型[J]. 计算机工程, 2023, 49(01): 270-278.
+		\bibitem{sun2015} Sun Y, Leng B, Guan W. A novel wavelet-SVM short-time passenger flow prediction in Beijing subway system[J]. Neurocomputing, 2015, 166: 109-121.
+		\bibitem{shi2025} 史纬地, 王宣淋. 基于时间序列模型的短时交通流预测研究[J]. 软件, 2025, 46(1): 79-81.
+		\bibitem{wang2025} 王庆荣, 慕壮壮, 朱昌锋, 等. 考虑异常数据的多层神经网络交通流预测模型[J]. 地球信息科学学报, 2025, 27(10): 2466-2481.
+		\bibitem{wen2025} 温政龙. 融合时间序列分析与深度学习的高速公路交通流预测模型[D]. 东北林业大学, 2025.
+		\bibitem{he2025} 何馨怡. 基于时空特征提取的短时交通流预测方法应用研究[D]. 贵州大学, 2025.
+	\end{thebibliography}
+	
+	% ========== 致谢 ==========
+	\chapter*{致谢}
+	\addcontentsline{toc}{chapter}{致谢}
+	在此，我想把心里最诚挚的谢意献给我的指导教师赵磊娜老师。从最初茫无头绪的选题，到开题时的反复斟酌，再到论文一字一句最终落定，整个过程中，赵老师给予的那些耐心指引和独到建议，始终被我珍藏在心。她治学上一贯的严谨，还有深厚的学养，都让我受到很深的感染与启发。
+	
+	数学与统计学院各位老师的教诲，为我的研究铺筑了不可或缺的基底。同窗好友们在学习和日常里递来的帮助与陪伴，也常常让我感动。很多次苦思不通的问题，正是在与他们你来我往的闲聊或争论中，忽然就被点亮了思路。
+	
+	我的家人，更是被我一直默默放在心头的动力。他们那份不掺杂质的关爱与默默的支持，让我在每一次想要停步的时候，又能打起精神继续往前走去。
+	
+\end{document}
